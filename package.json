@@ -64,7 +64,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "ZerdaLauncher",
       "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "ZerdaLauncher-Setup.${ext}"
     },
     "fileAssociations": [
       {
