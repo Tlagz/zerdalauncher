@@ -1,0 +1,87 @@
+{
+  "name": "zerda-launcher",
+  "version": "0.1.0",
+  "description": "ZerdaLauncher — custom Minecraft Java Edition launcher",
+  "main": "out/main/index.js",
+  "author": "Tlagz",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "icons": "node scripts/make-icons.cjs",
+    "package": "electron-vite build && electron-builder --win --x64",
+    "release": "electron-vite build && electron-builder --win --x64 --publish always",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.12",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.8.9",
+    "node-fetch": "^2.7.0",
+    "skinview3d": "^3.4.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
+    "@types/node": "^20.11.0",
+    "@types/node-fetch": "^2.6.11",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@types/uuid": "^9.0.8",
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.0",
+    "electron-vite": "^2.0.0",
+    "jimp": "^0.22.12",
+    "png-to-ico": "^3.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.1",
+    "zustand": "^4.5.0"
+  },
+  "build": {
+    "appId": "com.tlagz.zerdalauncher",
+    "productName": "ZerdaLauncher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "resources/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "ZerdaLauncher",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "fileAssociations": [
+      {
+        "ext": "zerda",
+        "name": "ZerdaLauncher Pack",
+        "description": "Paczka modów ZerdaLauncher",
+        "icon": "build/icon.ico",
+        "role": "Editor"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Tlagz",
+        "repo": "zerdalauncher",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
