@@ -21,7 +21,14 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        shell: bash
+        # Retry: the Electron binary download occasionally returns 5xx on CI.
+        run: |
+          for i in 1 2 3; do
+            npm install && break
+            echo "npm install failed (attempt $i) — retrying in 20s…"
+            sleep 20
+          done
 
       - name: Set version from tag
         shell: bash
