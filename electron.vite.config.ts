@@ -1,9 +1,13 @@
-import { defineConfig } from 'electron-vite';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
 export default defineConfig({
   main: {
+    // Keep node_modules deps (discord-rpc/ws, electron-updater, adm-zip, …) out
+    // of the bundle — loaded from node_modules at runtime. Required because ws
+    // lazily requires the optional native `bufferutil`, which can't be bundled.
+    plugins: [externalizeDepsPlugin()],
     // Inject the CurseForge key at build time from the CF_API_KEY env var
     // (a GitHub Actions secret in CI). Keeps the key OUT of source / the repo.
     define: {
@@ -17,6 +21,7 @@ export default defineConfig({
     }
   },
   preload: {
+    plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'out/preload',
       rollupOptions: {
