@@ -41,6 +41,8 @@ const MOD_CATEGORIES = [
   { key: 'transportation', label: 'Transport', icon: '🛤️' }
 ];
 
+const PAGE_SIZE = 20;
+
 function formatDownloads(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
@@ -66,6 +68,7 @@ export function ContentManagerModal({
   const [provider, setProvider] = useState<ModProvider>('modrinth');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [page, setPage] = useState(0);
   const [results, setResults] = useState<ModSearchResult[]>([]);
   const [installed, setInstalled] = useState<InstalledMod[]>([]);
   const [loading, setLoading] = useState(false);
@@ -102,7 +105,7 @@ export function ContentManagerModal({
           query,
           instance.mcVersion,
           instance.loader,
-          0,
+          page * PAGE_SIZE,
           category
         );
         if (!cancelled) setResults(r);
@@ -120,7 +123,12 @@ export function ContentManagerModal({
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query, provider, kind, category, instance.mcVersion, instance.loader]);
+  }, [query, provider, kind, category, page, instance.mcVersion, instance.loader]);
+
+  // Any filter change returns to the first page.
+  useEffect(() => {
+    setPage(0);
+  }, [query, category, provider, kind]);
 
   // Reset per-kind state when switching kind.
   useEffect(() => {
@@ -174,7 +182,7 @@ export function ContentManagerModal({
 
   return createPortal(
     <div className="modal-backdrop" {...backdrop}>
-      <div className="modal mod-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal mod-modal content-modal" onClick={(e) => e.stopPropagation()}>
         <div className="mod-modal-head">
           <div>
             <h3 style={{ margin: 0 }}>
@@ -235,35 +243,16 @@ export function ContentManagerModal({
         {error && <div className="error">{error}</div>}
 
         {tab === 'browse' ? (
-          <>
-            <input
-              autoFocus
-              placeholder={SEARCH_PLACEHOLDER[kind]}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              style={{ marginBottom: 12 }}
-            />
-            {kind === 'mod' && (
-              <div className="cat-chips">
-                <button
-                  className={`cat-chip ${category === '' ? 'active' : ''}`}
-                  onClick={() => setCategory('')}
-                >
-                  Wszystkie
-                </button>
-                {MOD_CATEGORIES.map((c) => (
-                  <button
-                    key={c.key}
-                    className={`cat-chip ${category === c.key ? 'active' : ''}`}
-                    onClick={() => setCategory(category === c.key ? '' : c.key)}
-                  >
-                    <span className="cat-chip-ic">{c.icon}</span>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="mod-list">
+          <div className="browse-layout">
+            <div className="browse-main">
+              <input
+                autoFocus
+                className="browse-search"
+                placeholder={SEARCH_PLACEHOLDER[kind]}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <div className="mod-list">
               {loading && <div className="mod-empty">Szukam…</div>}
               {!loading && results.length === 0 && !error && (
                 <div className="mod-empty">Brak wyników.</div>
@@ -303,10 +292,49 @@ export function ContentManagerModal({
                     </div>
                   );
                 })}
+              </div>
+              <div className="pager">
+                <button
+                  className="ghost"
+                  disabled={page === 0 || loading}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  ← Poprzednia
+                </button>
+                <span className="pager-info">Strona {page + 1}</span>
+                <button
+                  className="ghost"
+                  disabled={results.length < PAGE_SIZE || loading}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Następna →
+                </button>
+              </div>
             </div>
-          </>
+            {kind === 'mod' && (
+              <aside className="browse-cats">
+                <div className="browse-cats-title">Kategorie</div>
+                <button
+                  className={`cat-item ${category === '' ? 'active' : ''}`}
+                  onClick={() => setCategory('')}
+                >
+                  🗂️ Wszystkie
+                </button>
+                {MOD_CATEGORIES.map((c) => (
+                  <button
+                    key={c.key}
+                    className={`cat-item ${category === c.key ? 'active' : ''}`}
+                    onClick={() => setCategory(category === c.key ? '' : c.key)}
+                  >
+                    <span className="cat-item-ic">{c.icon}</span>
+                    {c.label}
+                  </button>
+                ))}
+              </aside>
+            )}
+          </div>
         ) : (
-          <>
+          <div className="installed-wrap">
             <div className="installed-toolbar">
               <button className="ghost" onClick={checkForUpdates} disabled={checking || installed.length === 0}>
                 {checking ? 'Sprawdzam…' : '🔄 Sprawdź aktualizacje'}
@@ -348,7 +376,7 @@ export function ContentManagerModal({
                 );
               })}
             </div>
-          </>
+          </div>
         )}
       </div>
 
