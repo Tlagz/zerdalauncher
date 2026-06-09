@@ -12,13 +12,18 @@ function clientId(): string {
   return (s.discordClientId || '').trim();
 }
 
+const SITE = 'https://zerdalauncher.pl';
+const BUTTONS = [{ label: 'Pobierz Zerda Launcher', url: SITE }];
+
 function idle(): void {
   try {
     client?.user?.setActivity({
-      details: 'W launcherze',
+      details: 'Zerda Launcher',
+      state: 'W menu głównym',
       largeImageKey: 'logo',
-      largeImageText: 'ZerdaLauncher',
-      startTimestamp: Date.now()
+      largeImageText: 'Zerda Launcher',
+      startTimestamp: Date.now(),
+      buttons: BUTTONS
     });
   } catch {
     /* ignore */
@@ -28,12 +33,13 @@ function idle(): void {
 function apply(a: { name: string; sub: string; start: number }): void {
   try {
     client?.user?.setActivity({
-      details: 'Gra w ' + a.name,
-      state: a.sub,
+      details: 'Zerda Launcher',
+      state: 'Gra w ' + a.name,
       startTimestamp: a.start,
       largeImageKey: 'logo',
-      largeImageText: 'ZerdaLauncher',
-      instance: false
+      largeImageText: a.sub || 'Zerda Launcher',
+      instance: false,
+      buttons: BUTTONS
     });
   } catch {
     /* ignore */
