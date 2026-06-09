@@ -17,6 +17,7 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
   const [ramMb, setRamMb] = useState(instance.ramMb);
   const [javaPath, setJavaPath] = useState(instance.javaPath ?? '');
   const [jvmArgs, setJvmArgs] = useState(instance.jvmArgs ?? '');
+  const [serverAddress, setServerAddress] = useState(instance.serverAddress ?? '');
   const [detectedJava, setDetectedJava] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +48,8 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
         icon: icon.trim() || undefined,
         ramMb,
         javaPath: javaPath.trim() || undefined,
-        jvmArgs
+        jvmArgs,
+        serverAddress: serverAddress.trim() || undefined
       });
       await refreshInstances();
       onClose();
@@ -153,6 +155,18 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
             />
             <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6 }}>
               Dopisywane do komendy uruchomienia (oprócz <code>-Xmx{ramMb}M</code>). Rozdzielaj spacjami.
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>Serwer — auto-dołączanie (Quick Play)</label>
+            <input
+              value={serverAddress}
+              onChange={(e) => setServerAddress(e.target.value)}
+              placeholder="np. mc.hypixel.net albo 51.83.12.4:25565"
+            />
+            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6 }}>
+              Po uruchomieniu launcher od razu wbije Cię na ten serwer (Minecraft 1.20+).
             </div>
           </div>
         </div>

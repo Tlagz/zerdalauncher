@@ -112,6 +112,26 @@ export function SettingsPage() {
       </div>
 
       <div className="section">
+        <h3>Discord Rich Presence</h3>
+        <div className="field-grid single">
+          <div>
+            <label>Discord Application ID (Client ID)</label>
+            <input
+              value={local.discordClientId}
+              onChange={(e) => setLocal({ ...local, discordClientId: e.target.value })}
+              placeholder="np. 123456789012345678"
+            />
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
+              Pokazuje „Gra w …" na Twoim profilu Discord. Stwórz aplikację na{' '}
+              <code>discord.com/developers</code>, skopiuj „Application ID" i wklej tutaj. Opcjonalnie
+              wgraj obrazek o nazwie <code>logo</code> w zakładce Rich Presence → Art Assets. Puste =
+              wyłączone.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
         <h3>Aktualizacje</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <div>

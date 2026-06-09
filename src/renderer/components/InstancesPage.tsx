@@ -3,13 +3,25 @@ import { useStore } from '../store';
 import { CreateInstanceModal } from './CreateInstanceModal';
 import { ModpackBrowserModal } from './ModpackBrowserModal';
 import { InstanceCard } from './InstanceCard';
+import { InstanceDetail } from './InstanceDetail';
+
+function fmtTotal(ms: number): string {
+  if (ms < 60000) return '';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
 
 export function InstancesPage() {
   const { instances, refreshInstances } = useStore();
+  const totalPlaytime = fmtTotal(instances.reduce((s, i) => s + (i.playtimeMs ?? 0), 0));
   const [showCreate, setShowCreate] = useState(false);
   const [showPacks, setShowPacks] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const selected = instances.find((i) => i.id === selectedId) ?? null;
 
   // Show import progress in the subtitle while a .mrpack/.zerda is unpacking.
   useEffect(() => {
@@ -32,6 +44,10 @@ export function InstancesPage() {
     }
   };
 
+  if (selected) {
+    return <InstanceDetail instance={selected} onBack={() => setSelectedId(null)} />;
+  }
+
   return (
     <>
       <div className="page-header">
@@ -42,7 +58,9 @@ export function InstancesPage() {
               ? importMsg ?? 'Importuję paczkę…'
               : instances.length === 0
               ? 'Brak instancji — stwórz pierwszą, by zacząć grać.'
-              : `${instances.length} ${instances.length === 1 ? 'instancja' : 'instancje'}`}
+              : `${instances.length} ${instances.length === 1 ? 'instancja' : 'instancje'}${
+                  totalPlaytime ? ` · ⏱ ${totalPlaytime} łącznie` : ''
+                }`}
           </div>
         </div>
         <div className="header-actions">
@@ -77,7 +95,7 @@ export function InstancesPage() {
             .slice()
             .sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))
             .map((inst) => (
-              <InstanceCard key={inst.id} instance={inst} />
+              <InstanceCard key={inst.id} instance={inst} onOpen={() => setSelectedId(inst.id)} />
             ))}
         </div>
       )}
