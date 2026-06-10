@@ -67,7 +67,7 @@ export function SettingsPage() {
         <div className="theme-grid">
           {[
             { id: 'default', label: 'Domyślny', desc: 'Fiolet + cyan' },
-            { id: 'crimson', label: 'Krwawy', desc: 'Czerwono-czarny' },
+            { id: 'dark', label: 'Ciemny', desc: 'Czarny + stal' },
             { id: 'light', label: 'Jasny', desc: 'Dzienny' }
           ].map((t) => (
             <button
