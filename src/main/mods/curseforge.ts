@@ -141,13 +141,16 @@ export async function search(
   offset = 0,
   limit = 20,
   projectType: 'mod' | 'modpack' | 'resourcepack' | 'shader' = 'mod',
-  category = ''
+  category = '',
+  sort = 'relevance'
 ): Promise<ModSearchResult[]> {
+  // CF sortField: 2=Popularity, 3=LastUpdated, 6=TotalDownloads.
+  const sortField = sort === 'downloads' ? '6' : sort === 'updated' ? '3' : '2';
   const params = new URLSearchParams({
     gameId: String(GAME_ID),
     classId: String(CLASS_BY_TYPE[projectType] ?? CLASS_BY_TYPE.mod),
     searchFilter: query,
-    sortField: '2', // popularity
+    sortField,
     sortOrder: 'desc',
     index: String(offset),
     pageSize: String(limit)

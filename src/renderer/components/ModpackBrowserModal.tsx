@@ -21,6 +21,7 @@ export function ModpackBrowserModal({
   const [provider, setProvider] = useState<ModProvider>('modrinth');
   const [query, setQuery] = useState('');
   const [mcFilter, setMcFilter] = useState('');
+  const [sort, setSort] = useState('relevance');
   const [results, setResults] = useState<ModSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export function ModpackBrowserModal({
       setLoading(true);
       setError(null);
       try {
-        const r = await window.api.modpacks.search(provider, query, mcFilter.trim());
+        const r = await window.api.modpacks.search(provider, query, mcFilter.trim(), 0, sort);
         if (!cancelled) setResults(r);
       } catch (e) {
         if (!cancelled) {
@@ -49,7 +50,7 @@ export function ModpackBrowserModal({
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query, mcFilter, provider]);
+  }, [query, mcFilter, provider, sort]);
 
   const backdrop = useBackdropClose(onClose);
 
@@ -86,8 +87,13 @@ export function ModpackBrowserModal({
             placeholder="Wersja MC (opcj.)"
             value={mcFilter}
             onChange={(e) => setMcFilter(e.target.value)}
-            style={{ width: 150 }}
+            style={{ width: 130 }}
           />
+          <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="relevance">Trafność</option>
+            <option value="downloads">Pobrania</option>
+            <option value="updated">Aktualizacja</option>
+          </select>
         </div>
 
         <div className="mod-list">

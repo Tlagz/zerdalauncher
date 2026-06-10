@@ -58,7 +58,8 @@ export async function search(
   offset = 0,
   limit = 20,
   projectType: 'mod' | 'modpack' | 'resourcepack' | 'shader' = 'mod',
-  category = ''
+  category = '',
+  sort = 'relevance'
 ): Promise<ModSearchResult[]> {
   const facets: string[][] = [[`project_type:${projectType}`]];
   if (mcVersion) facets.push([`versions:${mcVersion}`]);
@@ -67,11 +68,12 @@ export async function search(
   if (lf) facets.push([`categories:${lf}`]);
   if (category) facets.push([`categories:${category}`]);
 
+  const index = sort === 'downloads' ? 'downloads' : sort === 'updated' ? 'updated' : 'relevance';
   const params = new URLSearchParams({
     query,
     limit: String(limit),
     offset: String(offset),
-    index: 'relevance',
+    index,
     facets: JSON.stringify(facets)
   });
   const data = await getJson<SearchResponse>(`${API}/search?${params}`, headers);

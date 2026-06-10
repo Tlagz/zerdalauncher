@@ -5,6 +5,7 @@ import { ensureDirs } from './utils/paths';
 import { registerIpc } from './ipc';
 import { importPackFile } from './mods/modpacks';
 import { initUpdater, checkForUpdates } from './updater';
+import { initDiscord } from './discord';
 import { IPC } from '../shared/ipc-channels';
 
 let mainWindow: BrowserWindow | null = null;
@@ -100,6 +101,7 @@ if (!gotLock) {
   app.whenReady().then(() => {
     ensureDirs();
     initUpdater(() => mainWindow);
+    void initDiscord();
     registerIpc(() => mainWindow);
     createWindow();
     app.on('activate', () => {

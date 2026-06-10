@@ -3,12 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import { IPC } from '../shared/ipc-channels';
 import { checkForUpdates, quitAndInstall, currentStatus } from './updater';
+import { setPlaying, setIdle, reinitDiscord } from './discord';
 import {
   listInstances,
   createInstance,
   updateInstance,
   deleteInstance,
-  getInstance
+  getInstance,
+  duplicateInstance
 } from './minecraft/instances';
 import { fetchVersionManifest } from './minecraft/manifest';
 import { prepareVersion } from './minecraft/downloader';
@@ -50,6 +52,7 @@ import { paths, instanceDir, instanceGameDir } from './utils/paths';
 import { readJson, writeJson } from './utils/store';
 import { fetchAsDataUrl } from './utils/http';
 import { detectJava } from './utils/java';
+import { listWorlds, backupWorld, restoreWorld, deleteWorld, savesFolder } from './minecraft/worlds';
 import type { AppSettings, Instance, ModLoader } from '../shared/types';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
 
@@ -57,7 +60,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultRamMb: 2048,
   javaPath: '',
   closeOnLaunch: false,
-  curseforgeApiKey: ''
+  curseforgeApiKey: '',
+  discordClientId: ''
 };
 
 function getSettings(): AppSettings {
@@ -74,11 +78,29 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.instancesCreate, (_e, opts) => createInstance(opts));
   ipcMain.handle(IPC.instancesUpdate, (_e, id, patch) => updateInstance(id, patch));
   ipcMain.handle(IPC.instancesDelete, (_e, id) => deleteInstance(id));
+  ipcMain.handle(IPC.instancesDuplicate, (_e, id) => duplicateInstance(id));
   ipcMain.handle(IPC.instancesOpenFolder, (_e, id) => shell.openPath(instanceDir(id)));
   ipcMain.handle(IPC.instancesOpenCrashReports, (_e, id: string) => {
     const crashDir = path.join(instanceGameDir(id), 'crash-reports');
     return shell.openPath(fs.existsSync(crashDir) ? crashDir : instanceGameDir(id));
   });
+  // Worlds / backups
+  ipcMain.handle(IPC.worldsList, (_e, id: string) => listWorlds(id));
+  ipcMain.handle(IPC.worldsBackup, (_e, id: string, name: string) => backupWorld(id, name));
+  ipcMain.handle(IPC.worldsDelete, (_e, id: string, name: string) => deleteWorld(id, name));
+  ipcMain.handle(IPC.worldsOpenFolder, (_e, id: string) => shell.openPath(savesFolder(id)));
+  ipcMain.handle(IPC.worldsRestore, async (_e, id: string) => {
+    const win = getMainWindow() ?? undefined;
+    const res = await dialog.showOpenDialog(win!, {
+      title: 'Przywróć świat z kopii',
+      properties: ['openFile'],
+      filters: [{ name: 'Kopia świata', extensions: ['zip'] }]
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    restoreWorld(id, res.filePaths[0]);
+    return listWorlds(id);
+  });
+
   ipcMain.handle(IPC.instancesPickIcon, async () => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
@@ -125,8 +147,8 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   // Mods / content (mods, resourcepacks, shaders)
   ipcMain.handle(
     IPC.modsSearch,
-    (_e, kind, provider, query: string, mc: string, loader: string, offset: number, category: string) =>
-      searchContent(kind, provider, query, mc, loader, offset, category)
+    (_e, kind, provider, query: string, mc: string, loader: string, offset: number, category: string, sort: string) =>
+      searchContent(kind, provider, query, mc, loader, offset, category, sort)
   );
   ipcMain.handle(IPC.modsFiles, (_e, kind, provider, projectId: string, mc: string, loader: string) =>
     getContentFiles(kind, provider, projectId, mc, loader)
@@ -157,8 +179,8 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   const packProgress = (current: number, total: number, message: string) =>
     emitToAll(IPC.packProgress, { current, total, message });
 
-  ipcMain.handle(IPC.modpacksSearch, (_e, provider, query: string, mc: string, offset: number) =>
-    searchModpacks(provider, query, mc, offset)
+  ipcMain.handle(IPC.modpacksSearch, (_e, provider, query: string, mc: string, offset: number, sort: string) =>
+    searchModpacks(provider, query, mc, offset, sort)
   );
   ipcMain.handle(IPC.modpacksInstall, (_e, provider, projectId: string) =>
     installModpack(provider, projectId, packProgress)
@@ -215,8 +237,10 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   // Settings
   ipcMain.handle(IPC.settingsGet, () => getSettings());
   ipcMain.handle(IPC.settingsSet, (_e, patch: Partial<AppSettings>) => {
-    const next = { ...getSettings(), ...patch };
+    const prev = getSettings();
+    const next = { ...prev, ...patch };
     writeJson(paths.settings, next);
+    if (next.discordClientId !== prev.discordClientId) void reinitDiscord();
     return next;
   });
 
@@ -266,18 +290,32 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       const javaExe = await resolveJava(instance, prepared.data, getSettings(), progress);
 
       status('launching', 'Uruchamiam Minecraft');
+      const playStart = Date.now();
       launchGame({
         instance,
         account: acc,
         prepared,
         javaExe,
-        onExit: (code) => status('stopped', `Gra zakończona (kod ${code ?? 0})`),
+        onExit: (code) => {
+          // Accumulate playtime for stats, drop Discord presence back to idle.
+          const inst = getInstance(instance.id);
+          updateInstance(instance.id, {
+            playtimeMs: (inst?.playtimeMs ?? 0) + (Date.now() - playStart),
+            lastPlayed: Date.now()
+          });
+          setIdle();
+          status('stopped', `Gra zakończona (kod ${code ?? 0})`);
+        },
         onLog: (line) => {
           process.stdout.write(line);
           emitToAll(IPC.mcLog, { instanceId, line });
         }
       });
-      updateInstance(instance.id, { lastPlayed: Date.now() });
+      updateInstance(instance.id, {
+        lastPlayed: Date.now(),
+        sessions: (instance.sessions ?? 0) + 1
+      });
+      setPlaying(instance.name, `${instance.mcVersion} · ${instance.loader}`);
       status('running', 'Gra uruchomiona');
     } catch (err) {
       status('error', (err as Error).message);

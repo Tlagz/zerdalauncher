@@ -53,6 +53,11 @@ export function launchGame(opts: LaunchOptions): void {
       .map((a) => substituteVars(a, prepared.data, account, instance, prepared, classpath));
   }
 
+  // Quick Play: auto-join a server on launch (MC 1.20+ / modern versions).
+  if (instance.serverAddress?.trim()) {
+    gameArgs.push('--quickPlayMultiplayer', instance.serverAddress.trim());
+  }
+
   const args = [...jvmArgs, mainClass, ...gameArgs];
   opts.onLog?.(`[launch] ${javaExe} ${args.join(' ')}`);
 

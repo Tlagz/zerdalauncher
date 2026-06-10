@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
 import type { Instance } from '../../shared/types';
@@ -11,8 +12,15 @@ function fmtPlaytime(ms?: number): string {
 }
 
 export function InstanceCard({ instance, onOpen }: { instance: Instance; onOpen: () => void }) {
+  const { refreshInstances } = useStore();
   const { isLaunching, launch } = useLaunch(instance);
   const [dragOver, setDragOver] = useState(false);
+
+  const togglePin = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await window.api.instances.update(instance.id, { pinned: !instance.pinned });
+    await refreshInstances();
+  };
 
   // Drag & drop local files: .jar -> mods, .zip -> resourcepacks.
   const handleDrop = async (e: React.DragEvent) => {
@@ -61,6 +69,13 @@ export function InstanceCard({ instance, onOpen }: { instance: Instance; onOpen:
       onDrop={handleDrop}
     >
       {dragOver && <div className="card-drop">⬇ Upuść .jar / .zip, aby dodać</div>}
+      <button
+        className={`card-pin ${instance.pinned ? 'pinned' : ''}`}
+        title={instance.pinned ? 'Odepnij' : 'Przypnij na górę'}
+        onClick={togglePin}
+      >
+        {instance.pinned ? '★' : '☆'}
+      </button>
       <span className="card-chevron">›</span>
       <InstanceIcon instance={instance} />
       <div className="instance-name">{instance.name}</div>

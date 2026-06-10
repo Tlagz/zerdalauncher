@@ -12,6 +12,14 @@ export interface Instance {
   createdAt: number;
   lastPlayed?: number;
   icon?: string;
+  /** Total accumulated playtime in milliseconds. */
+  playtimeMs?: number;
+  /** Number of times the instance has been launched. */
+  sessions?: number;
+  /** Optional server address — auto-join on launch via --quickPlayMultiplayer. */
+  serverAddress?: string;
+  /** Pinned instances sort to the top of the list. */
+  pinned?: boolean;
 }
 
 export interface Account {
@@ -38,6 +46,15 @@ export interface AppSettings {
   closeOnLaunch: boolean;
   /** User-supplied CurseForge Eternal API key (required for CurseForge mods/packs). */
   curseforgeApiKey: string;
+  /** Discord application (client) ID for Rich Presence. Empty = disabled. */
+  discordClientId: string;
+}
+
+export interface WorldInfo {
+  name: string;
+  folder: string;
+  sizeMb: number;
+  lastPlayed?: number;
 }
 
 export interface DownloadProgress {

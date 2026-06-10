@@ -36,6 +36,21 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
     }
   };
 
+  const handleDuplicate = async () => {
+    try {
+      const copy = await window.api.instances.duplicate(instance.id);
+      await refreshInstances();
+      if (copy) alert(`Utworzono kopię: „${copy.name}".`);
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
+
+  const togglePin = async () => {
+    await window.api.instances.update(instance.id, { pinned: !instance.pinned });
+    await refreshInstances();
+  };
+
   const handleDelete = async () => {
     if (
       !confirm(
@@ -57,6 +72,12 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
     { icon: '🖥', label: 'Konsola (logi gry)', onClick: () => setShowConsole(true) },
     { icon: '🌍', label: 'Światy i kopie', onClick: () => setShowWorlds(true) },
     { icon: '⚙', label: 'Ustawienia instancji', onClick: () => setShowEdit(true) },
+    { icon: '📑', label: 'Duplikuj instancję', onClick: handleDuplicate },
+    {
+      icon: instance.pinned ? '★' : '☆',
+      label: instance.pinned ? 'Odepnij z góry' : 'Przypnij na górę',
+      onClick: togglePin
+    },
     { icon: '📦', label: 'Eksportuj .zerda', onClick: handleExport },
     { icon: '📁', label: 'Otwórz folder', onClick: () => window.api.instances.openFolder(instance.id) }
   ];

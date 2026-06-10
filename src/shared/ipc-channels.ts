@@ -4,9 +4,17 @@ export const IPC = {
   instancesCreate: 'instances:create',
   instancesDelete: 'instances:delete',
   instancesUpdate: 'instances:update',
+  instancesDuplicate: 'instances:duplicate',
   instancesOpenFolder: 'instances:openFolder',
   instancesOpenCrashReports: 'instances:openCrashReports',
   instancesPickIcon: 'instances:pickIcon',
+
+  // Worlds / backups
+  worldsList: 'worlds:list',
+  worldsBackup: 'worlds:backup',
+  worldsRestore: 'worlds:restore',
+  worldsDelete: 'worlds:delete',
+  worldsOpenFolder: 'worlds:openFolder',
 
   // Minecraft
   mcVersions: 'mc:versions',

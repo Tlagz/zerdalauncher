@@ -73,13 +73,14 @@ export async function searchContent(
   mcVersion: string,
   loader: string,
   offset = 0,
-  category = ''
+  category = '',
+  sort = 'relevance'
 ): Promise<ModSearchResult[]> {
   const l = effectiveLoader(kind, loader);
   // Categories only apply to mods.
   const cat = kind === 'mod' ? category : '';
-  if (provider === 'modrinth') return modrinth.search(query, mcVersion, l, offset, 20, kind, cat);
-  if (provider === 'curseforge') return curseforge.search(query, mcVersion, l, offset, 20, kind, cat);
+  if (provider === 'modrinth') return modrinth.search(query, mcVersion, l, offset, 20, kind, cat, sort);
+  if (provider === 'curseforge') return curseforge.search(query, mcVersion, l, offset, 20, kind, cat, sort);
   return unsupported(provider);
 }
 
@@ -88,10 +89,11 @@ export async function searchModpacks(
   provider: ModProvider,
   query: string,
   mcVersion: string,
-  offset = 0
+  offset = 0,
+  sort = 'relevance'
 ): Promise<ModSearchResult[]> {
-  if (provider === 'modrinth') return modrinth.search(query, mcVersion, '', offset, 20, 'modpack');
-  if (provider === 'curseforge') return curseforge.search(query, mcVersion, '', offset, 20, 'modpack');
+  if (provider === 'modrinth') return modrinth.search(query, mcVersion, '', offset, 20, 'modpack', '', sort);
+  if (provider === 'curseforge') return curseforge.search(query, mcVersion, '', offset, 20, 'modpack', '', sort);
   return unsupported(provider);
 }
 

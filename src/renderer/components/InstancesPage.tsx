@@ -20,8 +20,21 @@ export function InstancesPage() {
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('lastPlayed');
 
   const selected = instances.find((i) => i.id === selectedId) ?? null;
+
+  const visible = instances
+    .slice()
+    .sort((a, b) => {
+      if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'playtime') return (b.playtimeMs ?? 0) - (a.playtimeMs ?? 0);
+      if (sortBy === 'created') return (b.createdAt ?? 0) - (a.createdAt ?? 0);
+      return (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0);
+    })
+    .filter((i) => i.name.toLowerCase().includes(search.trim().toLowerCase()));
 
   // Show import progress in the subtitle while a .mrpack/.zerda is unpacking.
   useEffect(() => {
@@ -90,14 +103,33 @@ export function InstancesPage() {
           </div>
         </div>
       ) : (
-        <div className="instance-grid">
-          {instances
-            .slice()
-            .sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))
-            .map((inst) => (
-              <InstanceCard key={inst.id} instance={inst} onOpen={() => setSelectedId(inst.id)} />
-            ))}
-        </div>
+        <>
+          <div className="instances-toolbar">
+            <input
+              className="instances-search"
+              placeholder="🔎 Szukaj instancji…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="lastPlayed">Ostatnio grane</option>
+              <option value="name">Nazwa (A→Z)</option>
+              <option value="playtime">Czas gry</option>
+              <option value="created">Najnowsze</option>
+            </select>
+          </div>
+          {visible.length === 0 ? (
+            <div className="empty">
+              <p>Brak instancji pasujących do „{search}".</p>
+            </div>
+          ) : (
+            <div className="instance-grid">
+              {visible.map((inst) => (
+                <InstanceCard key={inst.id} instance={inst} onOpen={() => setSelectedId(inst.id)} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {showCreate && <CreateInstanceModal onClose={() => setShowCreate(false)} />}

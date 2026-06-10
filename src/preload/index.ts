@@ -13,7 +13,8 @@ import type {
   InstalledMod,
   ContentKind,
   ContentUpdate,
-  UpdateStatus
+  UpdateStatus,
+  WorldInfo
 } from '../shared/types';
 
 const api = {
@@ -31,10 +32,21 @@ const api = {
     update: (id: string, patch: Partial<Instance>): Promise<Instance | null> =>
       ipcRenderer.invoke(IPC.instancesUpdate, id, patch),
     delete: (id: string): Promise<void> => ipcRenderer.invoke(IPC.instancesDelete, id),
+    duplicate: (id: string): Promise<Instance | null> =>
+      ipcRenderer.invoke(IPC.instancesDuplicate, id),
     openFolder: (id: string): Promise<string> => ipcRenderer.invoke(IPC.instancesOpenFolder, id),
     openCrashReports: (id: string): Promise<string> =>
       ipcRenderer.invoke(IPC.instancesOpenCrashReports, id),
     pickIcon: (): Promise<string | null> => ipcRenderer.invoke(IPC.instancesPickIcon)
+  },
+  worlds: {
+    list: (id: string): Promise<WorldInfo[]> => ipcRenderer.invoke(IPC.worldsList, id),
+    backup: (id: string, name: string): Promise<string> =>
+      ipcRenderer.invoke(IPC.worldsBackup, id, name),
+    restore: (id: string): Promise<WorldInfo[] | null> => ipcRenderer.invoke(IPC.worldsRestore, id),
+    delete: (id: string, name: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.worldsDelete, id, name),
+    openFolder: (id: string): Promise<string> => ipcRenderer.invoke(IPC.worldsOpenFolder, id)
   },
   mc: {
     versions: (): Promise<{
@@ -79,9 +91,10 @@ const api = {
       mc: string,
       loader: string,
       offset = 0,
-      category = ''
+      category = '',
+      sort = 'relevance'
     ): Promise<ModSearchResult[]> =>
-      ipcRenderer.invoke(IPC.modsSearch, kind, provider, query, mc, loader, offset, category),
+      ipcRenderer.invoke(IPC.modsSearch, kind, provider, query, mc, loader, offset, category, sort),
     files: (
       kind: ContentKind,
       provider: ModProvider,
@@ -124,9 +137,10 @@ const api = {
       provider: ModProvider,
       query: string,
       mc: string,
-      offset = 0
+      offset = 0,
+      sort = 'relevance'
     ): Promise<ModSearchResult[]> =>
-      ipcRenderer.invoke(IPC.modpacksSearch, provider, query, mc, offset),
+      ipcRenderer.invoke(IPC.modpacksSearch, provider, query, mc, offset, sort),
     install: (provider: ModProvider, projectId: string): Promise<string> =>
       ipcRenderer.invoke(IPC.modpacksInstall, provider, projectId),
     versions: (provider: ModProvider, projectId: string): Promise<ModFile[]> =>

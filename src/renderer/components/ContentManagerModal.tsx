@@ -68,6 +68,7 @@ export function ContentManagerModal({
   const [provider, setProvider] = useState<ModProvider>('modrinth');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [sort, setSort] = useState('relevance');
   const [page, setPage] = useState(0);
   const [results, setResults] = useState<ModSearchResult[]>([]);
   const [installed, setInstalled] = useState<InstalledMod[]>([]);
@@ -106,7 +107,8 @@ export function ContentManagerModal({
           instance.mcVersion,
           instance.loader,
           page * PAGE_SIZE,
-          category
+          category,
+          sort
         );
         if (!cancelled) setResults(r);
       } catch (e) {
@@ -123,12 +125,12 @@ export function ContentManagerModal({
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query, provider, kind, category, page, instance.mcVersion, instance.loader]);
+  }, [query, provider, kind, category, sort, page, instance.mcVersion, instance.loader]);
 
   // Any filter change returns to the first page.
   useEffect(() => {
     setPage(0);
-  }, [query, category, provider, kind]);
+  }, [query, category, sort, provider, kind]);
 
   // Reset per-kind state when switching kind.
   useEffect(() => {
@@ -245,13 +247,20 @@ export function ContentManagerModal({
         {tab === 'browse' ? (
           <div className="browse-layout">
             <div className="browse-main">
-              <input
-                autoFocus
-                className="browse-search"
-                placeholder={SEARCH_PLACEHOLDER[kind]}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
+              <div className="browse-searchbar">
+                <input
+                  autoFocus
+                  className="browse-search"
+                  placeholder={SEARCH_PLACEHOLDER[kind]}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
+                  <option value="relevance">Trafność</option>
+                  <option value="downloads">Pobrania</option>
+                  <option value="updated">Aktualizacja</option>
+                </select>
+              </div>
               <div className="mod-list">
               {loading && <div className="mod-empty">Szukam…</div>}
               {!loading && results.length === 0 && !error && (
