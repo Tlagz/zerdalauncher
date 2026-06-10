@@ -137,25 +137,6 @@ export function SettingsPage() {
       </div>
 
       <div className="section">
-        <h3>Discord Rich Presence</h3>
-        <div className="field-grid single">
-          <div>
-            <label>Discord Application ID (opcjonalnie)</label>
-            <input
-              value={local.discordClientId}
-              onChange={(e) => setLocal({ ...local, discordClientId: e.target.value })}
-              placeholder="wbudowane — zostaw puste"
-            />
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
-              Status „Gra w …" na Discordzie działa <b>od razu</b> — ZerdaLauncher ma wbudowaną
-              aplikację. To pole jest tylko dla zaawansowanych, jeśli chcesz użyć własnej aplikacji
-              Discord (wpisz swój Application ID). Puste = wbudowana.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="section">
         <h3>Aktualizacje</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <div>
