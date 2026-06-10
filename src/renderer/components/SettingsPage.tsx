@@ -140,17 +140,16 @@ export function SettingsPage() {
         <h3>Discord Rich Presence</h3>
         <div className="field-grid single">
           <div>
-            <label>Discord Application ID (Client ID)</label>
+            <label>Discord Application ID (opcjonalnie)</label>
             <input
               value={local.discordClientId}
               onChange={(e) => setLocal({ ...local, discordClientId: e.target.value })}
-              placeholder="np. 123456789012345678"
+              placeholder="wbudowane — zostaw puste"
             />
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
-              Pokazuje „Gra w …" na Twoim profilu Discord. Stwórz aplikację na{' '}
-              <code>discord.com/developers</code>, skopiuj „Application ID" i wklej tutaj. Opcjonalnie
-              wgraj obrazek o nazwie <code>logo</code> w zakładce Rich Presence → Art Assets. Puste =
-              wyłączone.
+              Status „Gra w …" na Discordzie działa <b>od razu</b> — ZerdaLauncher ma wbudowaną
+              aplikację. To pole jest tylko dla zaawansowanych, jeśli chcesz użyć własnej aplikacji
+              Discord (wpisz swój Application ID). Puste = wbudowana.
             </div>
           </div>
         </div>

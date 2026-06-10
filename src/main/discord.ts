@@ -7,9 +7,13 @@ let client: Client | null = null;
 let ready = false;
 let current: { name: string; sub: string; start: number } | null = null;
 
+// ZerdaLauncher's Discord application id (public — not a secret). Used by default
+// so Rich Presence works out of the box; a settings override still takes priority.
+const DEFAULT_DISCORD_CLIENT_ID = '1513933047299440690';
+
 function clientId(): string {
   const s = readJson<Partial<AppSettings>>(paths.settings, {});
-  return (s.discordClientId || '').trim();
+  return (s.discordClientId || '').trim() || DEFAULT_DISCORD_CLIENT_ID;
 }
 
 const SITE = 'https://zerdalauncher.pl';
