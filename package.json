@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
+    "@xhayper/discord-rpc": "^1.3.4",
     "adm-zip": "^0.5.12",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.8.9",
