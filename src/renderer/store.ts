@@ -5,17 +5,19 @@ import type {
   AppSettings,
   DownloadProgress,
   LaunchStatus,
-  UpdateStatus
+  UpdateStatus,
+  ServerInstance,
+  ServerStatus
 } from '../shared/types';
 
 interface UiState {
-  page: 'instances' | 'accounts' | 'settings';
+  page: 'instances' | 'servers' | 'accounts' | 'settings';
   setPage: (p: UiState['page']) => void;
 
   instances: Instance[];
   accounts: Account[];
-  activeAccountId: string | null;
   settings: AppSettings | null;
+  activeAccountId: string | null;
 
   launchProgress: DownloadProgress | null;
   launchStatus: LaunchStatus | null;
@@ -23,6 +25,13 @@ interface UiState {
   /** Game console output per instance id (capped buffer). */
   logs: Record<string, string>;
   clearLogs: (instanceId: string) => void;
+
+  /** Servers + their per-server console output and status. */
+  servers: ServerInstance[];
+  serverLogs: Record<string, string>;
+  serverStatus: Record<string, ServerStatus>;
+  refreshServers: () => Promise<void>;
+  clearServerLog: (id: string) => void;
 
   /** Launcher self-update status + dismissable banner flag. */
   updateStatus: UpdateStatus | null;
@@ -49,6 +58,12 @@ export const useStore = create<UiState>((set) => ({
   logs: {},
   clearLogs: (instanceId) =>
     set((s) => ({ logs: { ...s.logs, [instanceId]: '' } })),
+
+  servers: [],
+  serverLogs: {},
+  serverStatus: {},
+  refreshServers: async () => set({ servers: await window.api.servers.list() }),
+  clearServerLog: (id) => set((s) => ({ serverLogs: { ...s.serverLogs, [id]: '' } })),
 
   updateStatus: null,
   updateDismissed: false,
@@ -77,4 +92,13 @@ window.api.updates.onStatus((updateStatus) =>
     // re-show the banner when a new download becomes ready
     updateDismissed: updateStatus.state === 'ready' ? false : s.updateDismissed
   }))
+);
+window.api.servers.onLog(({ id, line }) =>
+  useStore.setState((s) => {
+    const next = ((s.serverLogs[id] ?? '') + line).slice(-LOG_CAP);
+    return { serverLogs: { ...s.serverLogs, [id]: next } };
+  })
+);
+window.api.servers.onStatus((st) =>
+  useStore.setState((s) => ({ serverStatus: { ...s.serverStatus, [st.id]: st } }))
 );

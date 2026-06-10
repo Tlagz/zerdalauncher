@@ -14,7 +14,9 @@ import type {
   ContentKind,
   ContentUpdate,
   UpdateStatus,
-  WorldInfo
+  WorldInfo,
+  ServerInstance,
+  ServerStatus
 } from '../shared/types';
 
 const api = {
@@ -38,6 +40,49 @@ const api = {
     openCrashReports: (id: string): Promise<string> =>
       ipcRenderer.invoke(IPC.instancesOpenCrashReports, id),
     pickIcon: (): Promise<string | null> => ipcRenderer.invoke(IPC.instancesPickIcon)
+  },
+  servers: {
+    list: (): Promise<ServerInstance[]> => ipcRenderer.invoke(IPC.serversList),
+    create: (opts: {
+      name: string;
+      mcVersion: string;
+      loader: 'vanilla' | 'fabric';
+      ramMb?: number;
+      port?: number;
+    }): Promise<ServerInstance> => ipcRenderer.invoke(IPC.serversCreate, opts),
+    delete: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversDelete, id),
+    start: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversStart, id),
+    stop: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversStop, id),
+    command: (id: string, cmd: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.serversCommand, id, cmd),
+    openFolder: (id: string): Promise<string> => ipcRenderer.invoke(IPC.serversOpenFolder, id),
+    addMods: (id: string, filePaths: string[]): Promise<void> =>
+      ipcRenderer.invoke(IPC.serversAddMods, id, filePaths),
+    getProps: (id: string): Promise<Record<string, string>> =>
+      ipcRenderer.invoke(IPC.serversGetProps, id),
+    setProps: (id: string, patch: Record<string, string>): Promise<void> =>
+      ipcRenderer.invoke(IPC.serversSetProps, id, patch),
+    onProgress: (cb: (p: { current: number; total: number; message: string }) => void): (() => void) => {
+      const fn = (_: unknown, p: { current: number; total: number; message: string }) => cb(p);
+      ipcRenderer.on(IPC.serversCreateProgress, fn);
+      return () => {
+        ipcRenderer.off(IPC.serversCreateProgress, fn);
+      };
+    },
+    onLog: (cb: (l: { id: string; line: string }) => void): (() => void) => {
+      const fn = (_: unknown, l: { id: string; line: string }) => cb(l);
+      ipcRenderer.on(IPC.serversLog, fn);
+      return () => {
+        ipcRenderer.off(IPC.serversLog, fn);
+      };
+    },
+    onStatus: (cb: (s: ServerStatus) => void): (() => void) => {
+      const fn = (_: unknown, s: ServerStatus) => cb(s);
+      ipcRenderer.on(IPC.serversStatus, fn);
+      return () => {
+        ipcRenderer.off(IPC.serversStatus, fn);
+      };
+    }
   },
   worlds: {
     list: (id: string): Promise<WorldInfo[]> => ipcRenderer.invoke(IPC.worldsList, id),

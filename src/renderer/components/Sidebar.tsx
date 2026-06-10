@@ -3,6 +3,7 @@ import logo from '../assets/logo.png';
 
 const NAV = [
   { id: 'instances', label: 'Instancje', icon: '🎮' },
+  { id: 'servers', label: 'Serwery', icon: '🖧' },
   { id: 'accounts', label: 'Konta', icon: '👤' },
   { id: 'settings', label: 'Ustawienia', icon: '⚙️' }
 ] as const;

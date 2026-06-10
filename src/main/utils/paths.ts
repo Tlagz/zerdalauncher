@@ -21,6 +21,7 @@ const dataRoot = path.join(appData, 'ZerdaLauncher');
 export const paths = {
   root: dataRoot,
   instances: path.join(dataRoot, 'instances'),
+  servers: path.join(dataRoot, 'servers'),
   versions: path.join(dataRoot, 'versions'),
   libraries: path.join(dataRoot, 'libraries'),
   assets: path.join(dataRoot, 'assets'),
@@ -36,6 +37,7 @@ export function ensureDirs(): void {
   for (const dir of [
     paths.root,
     paths.instances,
+    paths.servers,
     paths.versions,
     paths.libraries,
     paths.assets,
@@ -55,4 +57,8 @@ export function instanceDir(id: string): string {
 
 export function instanceGameDir(id: string): string {
   return path.join(instanceDir(id), 'minecraft');
+}
+
+export function serverDir(id: string): string {
+  return path.join(paths.servers, id);
 }

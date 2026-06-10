@@ -6,6 +6,7 @@ import { registerIpc } from './ipc';
 import { importPackFile } from './mods/modpacks';
 import { initUpdater, checkForUpdates } from './updater';
 import { initDiscord } from './discord';
+import { killAllServers } from './server';
 import { IPC } from '../shared/ipc-channels';
 
 let mainWindow: BrowserWindow | null = null;
@@ -109,7 +110,9 @@ if (!gotLock) {
     });
   });
 
+  app.on('before-quit', () => killAllServers());
   app.on('window-all-closed', () => {
+    killAllServers();
     if (process.platform !== 'darwin') app.quit();
   });
 }

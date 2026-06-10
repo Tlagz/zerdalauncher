@@ -53,6 +53,19 @@ import { readJson, writeJson } from './utils/store';
 import { fetchAsDataUrl } from './utils/http';
 import { detectJava } from './utils/java';
 import { listWorlds, backupWorld, restoreWorld, deleteWorld, savesFolder } from './minecraft/worlds';
+import {
+  initServers,
+  listServers,
+  createServer,
+  deleteServer,
+  startServer,
+  stopServer,
+  sendCommand,
+  addLocalMods as addServerMods,
+  getProps,
+  setProps
+} from './server';
+import { serverDir } from './utils/paths';
 import type { AppSettings, Instance, ModLoader } from '../shared/types';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
 
@@ -85,6 +98,24 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     const crashDir = path.join(instanceGameDir(id), 'crash-reports');
     return shell.openPath(fs.existsSync(crashDir) ? crashDir : instanceGameDir(id));
   });
+  // Servers
+  initServers(
+    (id, line) => emitToAll(IPC.serversLog, { id, line }),
+    (s) => emitToAll(IPC.serversStatus, s)
+  );
+  const srvProgress = (current: number, total: number, message: string) =>
+    emitToAll(IPC.serversCreateProgress, { current, total, message });
+  ipcMain.handle(IPC.serversList, () => listServers());
+  ipcMain.handle(IPC.serversCreate, (_e, opts) => createServer(opts, srvProgress));
+  ipcMain.handle(IPC.serversDelete, (_e, id: string) => deleteServer(id));
+  ipcMain.handle(IPC.serversStart, (_e, id: string) => startServer(id));
+  ipcMain.handle(IPC.serversStop, (_e, id: string) => stopServer(id));
+  ipcMain.handle(IPC.serversCommand, (_e, id: string, cmd: string) => sendCommand(id, cmd));
+  ipcMain.handle(IPC.serversOpenFolder, (_e, id: string) => shell.openPath(serverDir(id)));
+  ipcMain.handle(IPC.serversAddMods, (_e, id: string, paths: string[]) => addServerMods(id, paths));
+  ipcMain.handle(IPC.serversGetProps, (_e, id: string) => getProps(id));
+  ipcMain.handle(IPC.serversSetProps, (_e, id: string, patch) => setProps(id, patch));
+
   // Worlds / backups
   ipcMain.handle(IPC.worldsList, (_e, id: string) => listWorlds(id));
   ipcMain.handle(IPC.worldsBackup, (_e, id: string, name: string) => backupWorld(id, name));

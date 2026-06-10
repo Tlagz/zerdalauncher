@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from './store';
 import { Sidebar } from './components/Sidebar';
 import { InstancesPage } from './components/InstancesPage';
+import { ServersPage } from './components/ServersPage';
 import { AccountsPage } from './components/AccountsPage';
 import { SettingsPage } from './components/SettingsPage';
 import { LoginScreen } from './components/LoginScreen';
@@ -9,7 +10,8 @@ import { StatusBar } from './components/StatusBar';
 import { UpdateBanner } from './components/UpdateBanner';
 
 export default function App() {
-  const { page, accounts, refreshAccounts, refreshInstances, refreshSettings } = useStore();
+  const { page, accounts, refreshAccounts, refreshInstances, refreshSettings, refreshServers } =
+    useStore();
 
   const settings = useStore((s) => s.settings);
 
@@ -17,6 +19,7 @@ export default function App() {
     refreshAccounts();
     refreshInstances();
     refreshSettings();
+    refreshServers();
   }, []);
 
   // Apply the selected UI theme to <html data-theme="…">.
@@ -69,6 +72,7 @@ export default function App() {
         <div className="main">
           <div key={page} className="page-fade">
             {page === 'instances' && <InstancesPage />}
+            {page === 'servers' && <ServersPage />}
             {page === 'accounts' && <AccountsPage />}
             {page === 'settings' && <SettingsPage />}
           </div>

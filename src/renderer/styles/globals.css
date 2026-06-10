@@ -1680,6 +1680,16 @@ input[type='checkbox'] {
   cursor: pointer;
   user-select: none;
 }
+.server-cmd {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.server-cmd input {
+  flex: 1;
+  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+}
 .console-output {
   flex: 1 1 auto;
   min-height: 0;

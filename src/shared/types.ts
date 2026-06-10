@@ -59,6 +59,27 @@ export interface WorldInfo {
   lastPlayed?: number;
 }
 
+// --- Servers ---
+export type ServerLoader = 'vanilla' | 'fabric';
+
+export interface ServerInstance {
+  id: string;
+  name: string;
+  mcVersion: string;
+  loader: ServerLoader;
+  loaderVersion?: string;
+  ramMb: number;
+  port: number;
+  createdAt: number;
+  jarReady: boolean;
+}
+
+export interface ServerStatus {
+  id: string;
+  state: 'stopped' | 'starting' | 'running' | 'error';
+  message?: string;
+}
+
 export interface DownloadProgress {
   instanceId: string;
   phase: string;

@@ -9,6 +9,21 @@ export const IPC = {
   instancesOpenCrashReports: 'instances:openCrashReports',
   instancesPickIcon: 'instances:pickIcon',
 
+  // Servers
+  serversList: 'servers:list',
+  serversCreate: 'servers:create',
+  serversDelete: 'servers:delete',
+  serversStart: 'servers:start',
+  serversStop: 'servers:stop',
+  serversCommand: 'servers:command',
+  serversOpenFolder: 'servers:openFolder',
+  serversAddMods: 'servers:addMods',
+  serversGetProps: 'servers:getProps',
+  serversSetProps: 'servers:setProps',
+  serversCreateProgress: 'servers:createProgress',
+  serversLog: 'servers:log',
+  serversStatus: 'servers:status',
+
   // Worlds / backups
   worldsList: 'worlds:list',
   worldsBackup: 'worlds:backup',
