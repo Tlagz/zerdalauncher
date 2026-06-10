@@ -61,7 +61,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   javaPath: '',
   closeOnLaunch: false,
   curseforgeApiKey: '',
-  discordClientId: ''
+  discordClientId: '',
+  theme: 'default'
 };
 
 function getSettings(): AppSettings {

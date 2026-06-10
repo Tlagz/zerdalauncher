@@ -48,6 +48,8 @@ export interface AppSettings {
   curseforgeApiKey: string;
   /** Discord application (client) ID for Rich Presence. Empty = disabled. */
   discordClientId: string;
+  /** UI theme: 'default' | 'crimson' | 'light'. */
+  theme: string;
 }
 
 export interface WorldInfo {

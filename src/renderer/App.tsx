@@ -11,11 +11,18 @@ import { UpdateBanner } from './components/UpdateBanner';
 export default function App() {
   const { page, accounts, refreshAccounts, refreshInstances, refreshSettings } = useStore();
 
+  const settings = useStore((s) => s.settings);
+
   useEffect(() => {
     refreshAccounts();
     refreshInstances();
     refreshSettings();
   }, []);
+
+  // Apply the selected UI theme to <html data-theme="…">.
+  useEffect(() => {
+    document.documentElement.dataset.theme = settings?.theme || 'default';
+  }, [settings?.theme]);
 
   // A pack opened via double-click (.zerda file association) is imported by the
   // main process; refresh the list and tell the user when it finishes.

@@ -63,6 +63,31 @@ export function SettingsPage() {
       </div>
 
       <div className="section">
+        <h3>Motyw</h3>
+        <div className="theme-grid">
+          {[
+            { id: 'default', label: 'Domyślny', desc: 'Fiolet + cyan' },
+            { id: 'crimson', label: 'Krwawy', desc: 'Czerwono-czarny' },
+            { id: 'light', label: 'Jasny', desc: 'Dzienny' }
+          ].map((t) => (
+            <button
+              type="button"
+              key={t.id}
+              className={`theme-card theme-${t.id} ${local.theme === t.id ? 'active' : ''}`}
+              onClick={() => {
+                setLocal({ ...local, theme: t.id });
+                document.documentElement.dataset.theme = t.id;
+              }}
+            >
+              <span className="theme-swatch" />
+              <span className="theme-name">{t.label}</span>
+              <span className="theme-desc">{t.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="section">
         <h3>Java</h3>
         <div className="field-grid single">
           <div>
