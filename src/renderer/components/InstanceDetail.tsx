@@ -6,6 +6,7 @@ import { ContentManagerModal } from './ContentManagerModal';
 import { ConsoleModal } from './ConsoleModal';
 import { EditInstanceModal } from './EditInstanceModal';
 import { WorldsModal } from './WorldsModal';
+import { confirmDialog, alertDialog, showToast } from '../ui/feedback';
 import type { Instance } from '../../shared/types';
 
 function fmtPlaytime(ms?: number): string {
@@ -30,9 +31,9 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
   const handleExport = async () => {
     try {
       const dest = await window.api.modpacks.export(instance.id);
-      if (dest) alert(`Wyeksportowano paczkę:\n${dest}`);
+      if (dest) showToast(`Wyeksportowano paczkę:\n${dest}`, 'success');
     } catch (e) {
-      alert((e as Error).message);
+      alertDialog({ message: (e as Error).message, tone: 'error' });
     }
   };
 
@@ -40,9 +41,9 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
     try {
       const copy = await window.api.instances.duplicate(instance.id);
       await refreshInstances();
-      if (copy) alert(`Utworzono kopię: „${copy.name}".`);
+      if (copy) showToast(`Utworzono kopię: „${copy.name}".`, 'success');
     } catch (e) {
-      alert((e as Error).message);
+      alertDialog({ message: (e as Error).message, tone: 'error' });
     }
   };
 
@@ -52,18 +53,19 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
   };
 
   const handleDelete = async () => {
-    if (
-      !confirm(
-        `Usunąć instancję "${instance.name}"?\n\nUWAGA: usunięty zostanie cały folder instancji — mody, configi, światy i zapisy przepadną bezpowrotnie.`
-      )
-    )
-      return;
+    const ok = await confirmDialog({
+      title: 'Usunąć instancję?',
+      message: `Cały folder instancji „${instance.name}" — mody, configi, światy i zapisy — przepadnie bezpowrotnie.`,
+      danger: true,
+      confirmLabel: 'Usuń instancję'
+    });
+    if (!ok) return;
     try {
       await window.api.instances.delete(instance.id);
       await refreshInstances();
       onBack();
     } catch (e) {
-      alert((e as Error).message);
+      alertDialog({ message: (e as Error).message, tone: 'error' });
     }
   };
 

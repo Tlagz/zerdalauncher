@@ -8,6 +8,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { LoginScreen } from './components/LoginScreen';
 import { StatusBar } from './components/StatusBar';
 import { UpdateBanner } from './components/UpdateBanner';
+import { FeedbackHost, alertDialog, showToast } from './ui/feedback';
 
 export default function App() {
   const { page, accounts, refreshAccounts, refreshInstances, refreshSettings, refreshServers } =
@@ -35,9 +36,13 @@ export default function App() {
       if (r.ok) {
         refreshInstances();
         useStore.getState().setPage('instances');
-        alert(`Zaimportowano paczkę${r.name ? ` „${r.name}"` : ''} jako nową instancję.`);
+        showToast(`Zaimportowano paczkę${r.name ? ` „${r.name}"` : ''} jako nową instancję.`, 'success');
       } else {
-        alert(`Nie udało się zaimportować paczki:\n${r.error ?? 'nieznany błąd'}`);
+        alertDialog({
+          title: 'Import nie powiódł się',
+          message: r.error ?? 'nieznany błąd',
+          tone: 'error'
+        });
       }
     });
   }, [refreshInstances]);
@@ -59,6 +64,7 @@ export default function App() {
       <>
         {Aurora}
         <LoginScreen />
+        <FeedbackHost />
       </>
     );
   }
@@ -79,6 +85,7 @@ export default function App() {
         </div>
         <StatusBar />
       </div>
+      <FeedbackHost />
     </>
   );
 }

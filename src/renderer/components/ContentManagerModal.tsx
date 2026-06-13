@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { SourceSwitch } from './SourceSwitch';
 import { VersionPickerModal } from './VersionPickerModal';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import { confirmDialog } from '../ui/feedback';
 import type {
   Instance,
   ModProvider,
@@ -183,7 +184,12 @@ export function ContentManagerModal({
     setInstalled(await window.api.mods.toggle(instance.id, kind, mod.fileName, !mod.enabled));
   };
   const handleDelete = async (mod: InstalledMod) => {
-    if (!confirm(`Usunąć „${mod.title ?? mod.fileName}"?`)) return;
+    const ok = await confirmDialog({
+      title: 'Usunąć?',
+      message: `„${mod.title ?? mod.fileName}" zostanie usunięty z tej instancji.`,
+      danger: true
+    });
+    if (!ok) return;
     setInstalled(await window.api.mods.delete(instance.id, kind, mod.fileName));
     setUpdates((prev) => prev.filter((x) => x.fileName !== mod.fileName));
   };

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
+import { alertDialog, showToast } from '../ui/feedback';
 import type { Instance } from '../../shared/types';
 
 function fmtPlaytime(ms?: number): string {
@@ -31,7 +32,7 @@ export function InstanceCard({ instance, onOpen }: { instance: Instance; onOpen:
     const jars = paths.filter((p) => /\.jar$/i.test(p));
     const zips = paths.filter((p) => /\.zip$/i.test(p));
     if (jars.length === 0 && zips.length === 0) {
-      alert('Upuść pliki .jar (mody) lub .zip (resource packi).');
+      showToast('Upuść pliki .jar (mody) lub .zip (resource packi).', 'info');
       return;
     }
     try {
@@ -44,9 +45,9 @@ export function InstanceCard({ instance, onOpen }: { instance: Instance; onOpen:
         await window.api.mods.addLocal(instance.id, 'resourcepack', zips);
         added.push(`${zips.length} × resource pack`);
       }
-      alert(`Dodano do instancji „${instance.name}": ${added.join(', ')}.`);
+      showToast(`Dodano do „${instance.name}": ${added.join(', ')}.`, 'success');
     } catch (err) {
-      alert((err as Error).message);
+      alertDialog({ message: (err as Error).message, tone: 'error' });
     }
   };
 

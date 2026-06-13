@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { CreateServerModal } from './CreateServerModal';
 import { ServerConsoleModal } from './ServerConsoleModal';
 import { ServerPropsModal } from './ServerPropsModal';
+import { confirmDialog, alertDialog, showToast } from '../ui/feedback';
 import type { ServerInstance } from '../../shared/types';
 
 function ServerCard({
@@ -32,11 +33,20 @@ function ServerCard({
 
   const toggle = () => {
     if (running) window.api.servers.stop(server.id);
-    else window.api.servers.start(server.id).catch((e) => alert((e as Error).message));
+    else
+      window.api.servers
+        .start(server.id)
+        .catch((e) => alertDialog({ message: (e as Error).message, tone: 'error' }));
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Usunąć serwer „${server.name}"? Cały folder serwera (świat, configi) przepadnie.`)) return;
+    const ok = await confirmDialog({
+      title: 'Usunąć serwer?',
+      message: `Cały folder serwera „${server.name}" (świat, configi, mody) przepadnie bezpowrotnie.`,
+      danger: true,
+      confirmLabel: 'Usuń serwer'
+    });
+    if (!ok) return;
     await window.api.servers.delete(server.id);
     await refreshServers();
   };
@@ -49,11 +59,11 @@ function ServerCard({
       .filter((p): p is string => !!p && /\.jar$/i.test(p));
     if (jars.length === 0) return;
     if (!supportsMods) {
-      alert('Mody dodasz tylko na serwerze Fabric / Forge / NeoForge (Vanilla ich nie wczyta).');
+      showToast('Mody dodasz tylko na serwerze Fabric / Forge / NeoForge (Vanilla ich nie wczyta).', 'info');
       return;
     }
     await window.api.servers.addMods(server.id, jars);
-    alert(`Dodano ${jars.length} mod(ów) do serwera „${server.name}".`);
+    showToast(`Dodano ${jars.length} mod(ów) do serwera „${server.name}".`, 'success');
   };
 
   return (

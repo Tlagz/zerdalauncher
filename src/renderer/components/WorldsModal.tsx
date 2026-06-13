@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import { confirmDialog } from '../ui/feedback';
 import type { Instance, WorldInfo } from '../../shared/types';
 
 function fmtSize(mb: number): string {
@@ -47,7 +48,13 @@ export function WorldsModal({ instance, onClose }: { instance: Instance; onClose
     }
   };
   const del = async (w: WorldInfo) => {
-    if (!confirm(`Usunąć świat „${w.name}"? Tej operacji nie da się cofnąć.`)) return;
+    const ok = await confirmDialog({
+      title: 'Usunąć świat?',
+      message: `Świat „${w.name}" zostanie usunięty. Tej operacji nie da się cofnąć.`,
+      danger: true,
+      confirmLabel: 'Usuń świat'
+    });
+    if (!ok) return;
     await window.api.worlds.delete(instance.id, w.name);
     load();
   };

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
+import { alertDialog } from '../ui/feedback';
 import type { ServerInstance } from '../../shared/types';
 
 export function ServerConsoleModal({ server, onClose }: { server: ServerInstance; onClose: () => void }) {
@@ -39,7 +40,7 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
 
   const send = () => {
     if (!cmd.trim()) return;
-    window.api.servers.command(server.id, cmd).catch((e) => alert((e as Error).message));
+    window.api.servers.command(server.id, cmd).catch((e) => alertDialog({ message: (e as Error).message, tone: 'error' }));
     setCmd('');
   };
 
@@ -72,7 +73,7 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
               ■ Zatrzymaj
             </button>
           ) : (
-            <button className="primary" onClick={() => window.api.servers.start(server.id).catch((e) => alert((e as Error).message))}>
+            <button className="primary" onClick={() => window.api.servers.start(server.id).catch((e) => alertDialog({ message: (e as Error).message, tone: 'error' }))}>
               ▶ Uruchom
             </button>
           )}
@@ -119,7 +120,7 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
             ) : (
               <button
                 className="primary"
-                onClick={() => window.api.servers.startTunnel(server.id).catch((e) => alert((e as Error).message))}
+                onClick={() => window.api.servers.startTunnel(server.id).catch((e) => alertDialog({ message: (e as Error).message, tone: 'error' }))}
               >
                 🌐 Udostępnij
               </button>

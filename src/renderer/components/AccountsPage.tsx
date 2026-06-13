@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { SkinView } from './SkinView';
+import { confirmDialog } from '../ui/feedback';
 
 export function AccountsPage() {
   const { accounts, activeAccountId, refreshAccounts } = useStore();
@@ -38,7 +39,14 @@ export function AccountsPage() {
   };
 
   const handleRemove = async (id: string) => {
-    if (!confirm('Usunąć to konto?')) return;
+    const acc = accounts.find((a) => a.id === id);
+    const ok = await confirmDialog({
+      title: 'Usunąć konto?',
+      message: `Konto „${acc?.username ?? ''}" zostanie usunięte z launchera.`,
+      danger: true,
+      confirmLabel: 'Usuń konto'
+    });
+    if (!ok) return;
     await window.api.accounts.remove(id);
     await refreshAccounts();
   };

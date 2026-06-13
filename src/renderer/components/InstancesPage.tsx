@@ -4,6 +4,7 @@ import { CreateInstanceModal } from './CreateInstanceModal';
 import { ModpackBrowserModal } from './ModpackBrowserModal';
 import { InstanceCard } from './InstanceCard';
 import { InstanceDetail } from './InstanceDetail';
+import { alertDialog } from '../ui/feedback';
 
 function fmtTotal(ms: number): string {
   if (ms < 60000) return '';
@@ -50,7 +51,7 @@ export function InstancesPage() {
       const id = await window.api.modpacks.import();
       if (id) await refreshInstances();
     } catch (e) {
-      alert((e as Error).message);
+      alertDialog({ title: 'Import nie powiódł się', message: (e as Error).message, tone: 'error' });
     } finally {
       setImporting(false);
       setImportMsg(null);

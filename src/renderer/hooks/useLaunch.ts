@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import { alertDialog } from '../ui/feedback';
 import type { Instance } from '../../shared/types';
 
 /** Shared launch state/handler so the card and the detail view stay in sync. */
@@ -18,7 +19,7 @@ export function useLaunch(instance: Instance) {
       await window.api.mc.launch(instance.id);
       await refreshInstances();
     } catch (e) {
-      alert((e as Error).message);
+      alertDialog({ title: 'Nie udało się uruchomić', message: (e as Error).message, tone: 'error' });
     } finally {
       setBusy(false);
     }
