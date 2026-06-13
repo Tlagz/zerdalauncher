@@ -7,6 +7,7 @@ import { importPackFile } from './mods/modpacks';
 import { initUpdater, checkForUpdates } from './updater';
 import { initDiscord } from './discord';
 import { killAllServers } from './server';
+import { stopAllTunnels } from './server/tunnel';
 import { IPC } from '../shared/ipc-channels';
 
 let mainWindow: BrowserWindow | null = null;
@@ -110,9 +111,13 @@ if (!gotLock) {
     });
   });
 
-  app.on('before-quit', () => killAllServers());
+  app.on('before-quit', () => {
+    killAllServers();
+    stopAllTunnels();
+  });
   app.on('window-all-closed', () => {
     killAllServers();
+    stopAllTunnels();
     if (process.platform !== 'darwin') app.quit();
   });
 }

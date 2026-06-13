@@ -56,6 +56,7 @@ import { listWorlds, backupWorld, restoreWorld, deleteWorld, savesFolder } from 
 import {
   initServers,
   listServers,
+  getServer,
   createServer,
   deleteServer,
   startServer,
@@ -65,6 +66,7 @@ import {
   getProps,
   setProps
 } from './server';
+import { initTunnel, startTunnel, stopTunnel } from './server/tunnel';
 import { serverDir } from './utils/paths';
 import type { AppSettings, Instance, ModLoader } from '../shared/types';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
@@ -103,6 +105,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     (id, line) => emitToAll(IPC.serversLog, { id, line }),
     (s) => emitToAll(IPC.serversStatus, s)
   );
+  initTunnel((s) => emitToAll(IPC.serversTunnelStatus, s));
   const srvProgress = (current: number, total: number, message: string) =>
     emitToAll(IPC.serversCreateProgress, { current, total, message });
   ipcMain.handle(IPC.serversList, () => listServers());
@@ -115,6 +118,12 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.serversAddMods, (_e, id: string, paths: string[]) => addServerMods(id, paths));
   ipcMain.handle(IPC.serversGetProps, (_e, id: string) => getProps(id));
   ipcMain.handle(IPC.serversSetProps, (_e, id: string, patch) => setProps(id, patch));
+  ipcMain.handle(IPC.serversTunnelStart, (_e, id: string) => {
+    const srv = getServer(id);
+    if (!srv) throw new Error('Brak serwera.');
+    return startTunnel(id, srv.port);
+  });
+  ipcMain.handle(IPC.serversTunnelStop, (_e, id: string) => stopTunnel(id));
 
   // Worlds / backups
   ipcMain.handle(IPC.worldsList, (_e, id: string) => listWorlds(id));

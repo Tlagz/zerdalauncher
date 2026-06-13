@@ -8,6 +8,7 @@ import { getJson, downloadFile } from '../utils/http';
 import { fetchVersionData } from '../minecraft/manifest';
 import { resolveJava } from '../minecraft/jre';
 import { fabricLoaders } from '../modloaders/fabric';
+import { stopTunnel } from './tunnel';
 import type { AppSettings, Instance, ServerInstance, ServerStatus } from '../../shared/types';
 
 const FILE = path.join(paths.root, 'servers.json');
@@ -207,6 +208,7 @@ export function setProps(id: string, patch: Record<string, string>): void {
 
 export function deleteServer(id: string): void {
   stopServer(id);
+  stopTunnel(id);
   const c = running.get(id);
   if (c) {
     try {

@@ -1690,6 +1690,61 @@ input[type='checkbox'] {
   font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
   font-size: 13px;
 }
+.tunnel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.tunnel-bar.on {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.12), rgba(99, 102, 241, 0.1));
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.tunnel-bar.err {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.08);
+}
+.tunnel-info {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.tunnel-globe {
+  font-size: 16px;
+  line-height: 1;
+}
+.tunnel-bar.on .tunnel-globe {
+  animation: dotPulse 1.6s ease-in-out infinite;
+}
+.tunnel-label {
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+.tunnel-addr {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #7dd3fc;
+  background: rgba(4, 5, 10, 0.55);
+  padding: 3px 9px;
+  border-radius: 7px;
+  user-select: all;
+  white-space: nowrap;
+}
+.tunnel-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .console-output {
   flex: 1 1 auto;
   min-height: 0;

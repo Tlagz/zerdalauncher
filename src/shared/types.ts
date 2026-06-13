@@ -80,6 +80,13 @@ export interface ServerStatus {
   message?: string;
 }
 
+export interface TunnelStatus {
+  id: string;
+  state: 'stopped' | 'starting' | 'active' | 'error';
+  address?: string;
+  message?: string;
+}
+
 export interface DownloadProgress {
   instanceId: string;
   phase: string;

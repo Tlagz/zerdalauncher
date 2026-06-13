@@ -7,7 +7,8 @@ import type {
   LaunchStatus,
   UpdateStatus,
   ServerInstance,
-  ServerStatus
+  ServerStatus,
+  TunnelStatus
 } from '../shared/types';
 
 interface UiState {
@@ -30,6 +31,7 @@ interface UiState {
   servers: ServerInstance[];
   serverLogs: Record<string, string>;
   serverStatus: Record<string, ServerStatus>;
+  tunnels: Record<string, TunnelStatus>;
   refreshServers: () => Promise<void>;
   clearServerLog: (id: string) => void;
 
@@ -62,6 +64,7 @@ export const useStore = create<UiState>((set) => ({
   servers: [],
   serverLogs: {},
   serverStatus: {},
+  tunnels: {},
   refreshServers: async () => set({ servers: await window.api.servers.list() }),
   clearServerLog: (id) => set((s) => ({ serverLogs: { ...s.serverLogs, [id]: '' } })),
 
@@ -101,4 +104,7 @@ window.api.servers.onLog(({ id, line }) =>
 );
 window.api.servers.onStatus((st) =>
   useStore.setState((s) => ({ serverStatus: { ...s.serverStatus, [st.id]: st } }))
+);
+window.api.servers.onTunnel((t) =>
+  useStore.setState((s) => ({ tunnels: { ...s.tunnels, [t.id]: t } }))
 );

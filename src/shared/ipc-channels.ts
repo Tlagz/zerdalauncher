@@ -23,6 +23,9 @@ export const IPC = {
   serversCreateProgress: 'servers:createProgress',
   serversLog: 'servers:log',
   serversStatus: 'servers:status',
+  serversTunnelStart: 'servers:tunnelStart',
+  serversTunnelStop: 'servers:tunnelStop',
+  serversTunnelStatus: 'servers:tunnelStatus',
 
   // Worlds / backups
   worldsList: 'worlds:list',

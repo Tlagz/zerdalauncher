@@ -16,7 +16,8 @@ import type {
   UpdateStatus,
   WorldInfo,
   ServerInstance,
-  ServerStatus
+  ServerStatus,
+  TunnelStatus
 } from '../shared/types';
 
 const api = {
@@ -81,6 +82,15 @@ const api = {
       ipcRenderer.on(IPC.serversStatus, fn);
       return () => {
         ipcRenderer.off(IPC.serversStatus, fn);
+      };
+    },
+    startTunnel: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversTunnelStart, id),
+    stopTunnel: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversTunnelStop, id),
+    onTunnel: (cb: (s: TunnelStatus) => void): (() => void) => {
+      const fn = (_: unknown, s: TunnelStatus) => cb(s);
+      ipcRenderer.on(IPC.serversTunnelStatus, fn);
+      return () => {
+        ipcRenderer.off(IPC.serversTunnelStatus, fn);
       };
     }
   },
