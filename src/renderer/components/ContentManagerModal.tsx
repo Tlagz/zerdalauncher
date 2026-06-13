@@ -90,7 +90,16 @@ export function ContentManagerModal({
   }, [updates]);
 
   const loadInstalled = async () => {
-    setInstalled(await window.api.mods.installed(instance.id, kind));
+    const list = await window.api.mods.installed(instance.id, kind);
+    setInstalled(list);
+    // Backfill icons for provider-tracked items that don't have one yet
+    // (older installs + auto-resolved dependencies) without blocking the UI.
+    if (list.some((m) => m.provider && m.projectId && !m.iconUrl)) {
+      window.api.mods
+        .fetchIcons(instance.id, kind)
+        .then(setInstalled)
+        .catch(() => {});
+    }
   };
 
   // Debounced search whenever query / provider / kind changes.
@@ -359,8 +368,15 @@ export function ContentManagerModal({
               {installed.map((m) => {
                 const upd = updateByFile.get(m.fileName);
                 return (
-                  <div className="mod-row" key={m.fileName}>
-                    <div className="mod-icon placeholder">{m.enabled ? '🟢' : '⚪'}</div>
+                  <div className={`mod-row ${m.enabled ? '' : 'is-disabled'}`} key={m.fileName}>
+                    <div className="mod-icon-wrap" title={m.enabled ? 'Włączony' : 'Wyłączony'}>
+                      {m.iconUrl ? (
+                        <img className="mod-icon" src={m.iconUrl} alt="" loading="lazy" />
+                      ) : (
+                        <div className="mod-icon placeholder">{KIND_ICON[kind]}</div>
+                      )}
+                      <span className={`mod-state-dot ${m.enabled ? 'on' : 'off'}`} />
+                    </div>
                     <div className="mod-info">
                       <div className="mod-title">{m.title ?? m.fileName}</div>
                       <div className="mod-sub">
@@ -398,7 +414,7 @@ export function ContentManagerModal({
             window.api.mods.files(kind, pickerFor.provider, pickerFor.projectId, instance.mcVersion, instance.loader)
           }
           onInstall={async (file) => {
-            await window.api.mods.install(instance.id, kind, file, true);
+            await window.api.mods.install(instance.id, kind, file, true, pickerFor.iconUrl);
             await loadInstalled();
             setPickerFor(null);
           }}

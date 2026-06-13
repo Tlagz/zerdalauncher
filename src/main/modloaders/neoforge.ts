@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import { getJson, downloadFile } from '../utils/http';
 import { paths } from '../utils/paths';
 import { detectJava } from '../utils/java';
+import { runServerInstaller } from './serverInstaller';
 
 const NEO_VERSIONS =
   'https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge';
@@ -108,6 +109,22 @@ export async function installNeoForge(neoVersion: string): Promise<string> {
   const installed = findInstalledNeoForge(neoVersion);
   if (!installed) throw new Error('Instalator NeoForge nie utworzył wersji.');
   return installed;
+}
+
+/**
+ * Install a NeoForge **server** into `serverDir` using the official installer's
+ * `--installServer` mode. Produces libraries/ + user_jvm_args.txt + the platform
+ * arg files the server is launched with (see findLoaderArgsFile in server/index).
+ */
+export async function installNeoForgeServer(
+  neoVersion: string,
+  serverDir: string,
+  javaExe: string,
+  log: (line: string) => void
+): Promise<void> {
+  const installerPath = path.join(paths.cache, `neoforge-${neoVersion}-installer.jar`);
+  await downloadFile(NEO_INSTALLER(neoVersion), installerPath);
+  await runServerInstaller(javaExe, installerPath, serverDir, log);
 }
 
 /** Find an already-installed NeoForge profile id for this version, if any. */

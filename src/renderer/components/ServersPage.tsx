@@ -20,7 +20,15 @@ function ServerCard({
   const state = status?.state ?? 'stopped';
   const running = state === 'running' || state === 'starting';
 
-  const loaderIcon = server.loader === 'fabric' ? '🧵' : '🧱';
+  const loaderIcon =
+    server.loader === 'fabric'
+      ? '🧵'
+      : server.loader === 'forge'
+      ? '🔥'
+      : server.loader === 'neoforge'
+      ? '⚒️'
+      : '🧱';
+  const supportsMods = server.loader !== 'vanilla';
 
   const toggle = () => {
     if (running) window.api.servers.stop(server.id);
@@ -40,8 +48,8 @@ function ServerCard({
       .map((f) => f.path)
       .filter((p): p is string => !!p && /\.jar$/i.test(p));
     if (jars.length === 0) return;
-    if (server.loader !== 'fabric') {
-      alert('Mody dodasz tylko na serwerze Fabric (Vanilla ich nie wczyta).');
+    if (!supportsMods) {
+      alert('Mody dodasz tylko na serwerze Fabric / Forge / NeoForge (Vanilla ich nie wczyta).');
       return;
     }
     await window.api.servers.addMods(server.id, jars);
@@ -107,7 +115,7 @@ export function ServersPage() {
           <div className="page-title">Serwery</div>
           <div className="page-subtitle">
             {servers.length === 0
-              ? 'Postaw własny serwer Minecraft (Vanilla lub Fabric) w kilka sekund.'
+              ? 'Postaw własny serwer Minecraft (Vanilla, Fabric, Forge lub NeoForge) w kilka chwil.'
               : `${servers.length} ${servers.length === 1 ? 'serwer' : 'serwery'}`}
           </div>
         </div>
@@ -122,8 +130,9 @@ export function ServersPage() {
         <div className="empty">
           <h2>Brak serwerów</h2>
           <p>
-            Stwórz serwer — launcher pobierze <code>server.jar</code>, zaakceptuje EULA i pozwoli
-            zarządzać nim z konsoli. Na Fabricu dorzucisz mody (przeciągnij .jar na kartę).
+            Stwórz serwer — launcher pobierze pliki serwera, zaakceptuje EULA i pozwoli
+            zarządzać nim z konsoli. Na Fabricu / Forge / NeoForge dorzucisz mody (przeciągnij .jar na
+            kartę).
           </p>
           <div className="login-actions" style={{ marginTop: 16, justifyContent: 'center' }}>
             <button className="primary" onClick={() => setShowCreate(true)}>

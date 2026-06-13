@@ -16,6 +16,7 @@ import type {
   UpdateStatus,
   WorldInfo,
   ServerInstance,
+  ServerLoader,
   ServerStatus,
   TunnelStatus
 } from '../shared/types';
@@ -47,7 +48,7 @@ const api = {
     create: (opts: {
       name: string;
       mcVersion: string;
-      loader: 'vanilla' | 'fabric';
+      loader: ServerLoader;
       ramMb?: number;
       port?: number;
     }): Promise<ServerInstance> => ipcRenderer.invoke(IPC.serversCreate, opts),
@@ -161,11 +162,14 @@ const api = {
       instanceId: string,
       kind: ContentKind,
       file: ModFile,
-      withDeps = true
+      withDeps = true,
+      iconUrl?: string
     ): Promise<InstalledMod[]> =>
-      ipcRenderer.invoke(IPC.modsInstall, instanceId, kind, file, withDeps),
+      ipcRenderer.invoke(IPC.modsInstall, instanceId, kind, file, withDeps, iconUrl),
     installed: (instanceId: string, kind: ContentKind): Promise<InstalledMod[]> =>
       ipcRenderer.invoke(IPC.modsInstalled, instanceId, kind),
+    fetchIcons: (instanceId: string, kind: ContentKind): Promise<InstalledMod[]> =>
+      ipcRenderer.invoke(IPC.modsFetchIcons, instanceId, kind),
     toggle: (
       instanceId: string,
       kind: ContentKind,

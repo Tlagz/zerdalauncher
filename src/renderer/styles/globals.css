@@ -1795,6 +1795,40 @@ input[type='checkbox'] {
   justify-content: center;
   font-size: 22px;
 }
+/* Installed-row icon with an enabled/disabled status dot. */
+.mod-icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+}
+.mod-icon-wrap .mod-icon {
+  width: 100%;
+  height: 100%;
+}
+.mod-state-dot {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid var(--bg, #0f1115);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.mod-state-dot.on {
+  background: #34d399;
+}
+.mod-state-dot.off {
+  background: #6b7280;
+}
+.mod-row.is-disabled .mod-icon {
+  filter: grayscale(0.85);
+  opacity: 0.5;
+}
+.mod-row.is-disabled .mod-title {
+  color: var(--text-dim);
+}
 .mod-info {
   flex: 1;
   min-width: 0;

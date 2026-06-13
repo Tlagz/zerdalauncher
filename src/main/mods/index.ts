@@ -37,7 +37,7 @@ const EXT: Record<ContentKind, RegExp> = {
 /** Metadata we remember about installed files, keyed by base filename. */
 type ContentManifest = Record<
   string,
-  { provider: ModProvider; projectId: string; fileId: string; title: string }
+  { provider: ModProvider; projectId: string; fileId: string; title: string; iconUrl?: string }
 >;
 
 function manifestPath(instanceId: string, kind: ContentKind): string {
@@ -131,7 +131,8 @@ export async function installContent(
   instanceId: string,
   kind: ContentKind,
   file: ModFile,
-  withDeps = true
+  withDeps = true,
+  iconUrl?: string
 ): Promise<InstalledMod[]> {
   const instance = getInstance(instanceId);
   if (!instance) throw new Error('Brak instancji.');
@@ -143,7 +144,7 @@ export async function installContent(
   const visited = new Set<string>();
   const resolveDeps = kind === 'mod' && withDeps;
 
-  const installOne = async (f: ModFile): Promise<void> => {
+  const installOne = async (f: ModFile, icon?: string): Promise<void> => {
     if (visited.has(f.projectId)) return;
     visited.add(f.projectId);
 
@@ -155,7 +156,10 @@ export async function installContent(
       provider: f.provider,
       projectId: f.projectId,
       fileId: f.fileId,
-      title: f.displayName
+      title: f.displayName,
+      // Icon for the primary file comes from the search result; deps are
+      // backfilled lazily by fetchInstalledIcons.
+      iconUrl: icon ?? manifest[baseName(f.fileName)]?.iconUrl
     };
 
     if (resolveDeps) {
@@ -172,7 +176,7 @@ export async function installContent(
     }
   };
 
-  await installOne(file);
+  await installOne(file, iconUrl);
   writeManifest(instanceId, kind, manifest);
   return listInstalledContent(instanceId, kind);
 }
@@ -221,10 +225,47 @@ export function listInstalledContent(instanceId: string, kind: ContentKind): Ins
       provider: meta?.provider,
       projectId: meta?.projectId,
       fileId: meta?.fileId,
-      title: meta?.title ?? base
+      title: meta?.title ?? base,
+      iconUrl: meta?.iconUrl
     });
   }
   return out.sort((a, b) => (a.title ?? a.fileName).localeCompare(b.title ?? b.fileName));
+}
+
+/**
+ * Backfill icons for provider-tracked items that don't have one cached yet
+ * (older installs + auto-resolved dependencies). Results are written to the
+ * manifest so this only hits the network once per item.
+ */
+export async function fetchInstalledIcons(
+  instanceId: string,
+  kind: ContentKind
+): Promise<InstalledMod[]> {
+  const manifest = readManifest(instanceId, kind);
+  const installed = listInstalledContent(instanceId, kind);
+  const missing = installed.filter((m) => m.provider && m.projectId && !m.iconUrl);
+  if (missing.length === 0) return installed;
+
+  let changed = false;
+  await Promise.all(
+    missing.map(async (m) => {
+      try {
+        const icon =
+          m.provider === 'curseforge'
+            ? await curseforge.getProjectIcon(m.projectId!)
+            : await modrinth.getProjectIcon(m.projectId!);
+        const entry = manifest[baseName(m.fileName)];
+        if (icon && entry) {
+          entry.iconUrl = icon;
+          changed = true;
+        }
+      } catch {
+        /* provider error — leave without an icon */
+      }
+    })
+  );
+  if (changed) writeManifest(instanceId, kind, manifest);
+  return listInstalledContent(instanceId, kind);
 }
 
 export function toggleContent(

@@ -56,6 +56,7 @@ export const IPC = {
   modsAddLocal: 'mods:addLocal',
   modsCheckUpdates: 'mods:checkUpdates',
   modsUpdate: 'mods:update',
+  modsFetchIcons: 'mods:fetchIcons',
 
   // Modpacks
   modpacksSearch: 'modpacks:search',

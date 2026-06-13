@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import { getJson, downloadFile } from '../utils/http';
 import { paths } from '../utils/paths';
 import { detectJava } from '../utils/java';
+import { runServerInstaller } from './serverInstaller';
 
 const FORGE_PROMOTIONS = 'https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json';
 const FORGE_INSTALLER = (full: string) =>
@@ -68,6 +69,23 @@ export async function installForge(mcVersion: string, forgeVersion: string): Pro
   const installed = findInstalledForge(mcVersion, forgeVersion);
   if (!installed) throw new Error('Forge installer nie utworzył wersji.');
   return installed;
+}
+
+/**
+ * Install a Forge **server** into `serverDir` via the installer's
+ * `--installServer` mode (modern arg-file based launch, MC 1.17+).
+ */
+export async function installForgeServer(
+  mcVersion: string,
+  forgeVersion: string,
+  serverDir: string,
+  javaExe: string,
+  log: (line: string) => void
+): Promise<void> {
+  const fullVersion = `${mcVersion}-${forgeVersion}`;
+  const installerPath = path.join(paths.cache, `forge-${fullVersion}-installer.jar`);
+  await downloadFile(FORGE_INSTALLER(fullVersion), installerPath);
+  await runServerInstaller(javaExe, installerPath, serverDir, log);
 }
 
 /** Find an already-installed Forge profile id for this MC/Forge pair, if any. */

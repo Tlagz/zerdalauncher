@@ -209,6 +209,12 @@ export async function getFilesByIds(fileIds: number[]): Promise<ModFile[]> {
   return data.data.map(toModFile);
 }
 
+/** Project icon URL by mod id (used to enrich the installed list). */
+export async function getProjectIcon(projectId: string): Promise<string | null> {
+  const data = await getJson<{ data: CfMod }>(`${API}/mods/${projectId}`, headers());
+  return data.data?.logo?.url || null;
+}
+
 /** Newest file of a project regardless of loader/MC (used to download a modpack). */
 export async function getLatestFile(projectId: string): Promise<ModFile | null> {
   const data = await getJson<{ data: CfFile[] }>(

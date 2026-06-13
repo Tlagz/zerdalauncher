@@ -146,6 +146,12 @@ export async function getVersionById(versionId: string): Promise<ModFile> {
   return toModFile(v);
 }
 
+/** Project icon URL by id/slug (used to enrich the installed list). */
+export async function getProjectIcon(projectId: string): Promise<string | null> {
+  const p = await getJson<{ icon_url?: string }>(`${API}/project/${projectId}`, headers);
+  return p.icon_url || null;
+}
+
 /** Newest version file of a project, regardless of loader/MC (used for modpacks). */
 export async function getLatestFile(projectId: string): Promise<ModFile | null> {
   const versions = await getJson<ModrinthVersion[]>(`${API}/project/${projectId}/version`, headers);

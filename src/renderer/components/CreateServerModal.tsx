@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import type { ServerLoader } from '../../shared/types';
 
 export function CreateServerModal({ onClose }: { onClose: () => void }) {
   const { refreshServers } = useStore();
@@ -9,7 +10,7 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
   const [showSnapshots, setShowSnapshots] = useState(false);
   const [name, setName] = useState('');
   const [mcVersion, setMcVersion] = useState('');
-  const [loader, setLoader] = useState<'vanilla' | 'fabric'>('fabric');
+  const [loader, setLoader] = useState<ServerLoader>('fabric');
   const [ramMb, setRamMb] = useState(2048);
   const [port, setPort] = useState(25565);
   const [eula, setEula] = useState(false);
@@ -100,7 +101,9 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
             {(
               [
                 { id: 'vanilla', label: 'Vanilla', icon: '🧱' },
-                { id: 'fabric', label: 'Fabric (mody)', icon: '🧵' }
+                { id: 'fabric', label: 'Fabric (mody)', icon: '🧵' },
+                { id: 'forge', label: 'Forge (mody)', icon: '🔥' },
+                { id: 'neoforge', label: 'NeoForge (mody)', icon: '⚒️' }
               ] as const
             ).map((l) => (
               <button
@@ -114,6 +117,12 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+          {(loader === 'forge' || loader === 'neoforge') && (
+            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 8 }}>
+              {loader === 'forge' ? 'Forge' : 'NeoForge'} uruchamia instalator i pobiera biblioteki —
+              pierwsze tworzenie może potrwać 1–2 minuty.
+            </div>
+          )}
         </div>
 
         <div className="field-grid">

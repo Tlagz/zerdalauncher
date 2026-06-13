@@ -60,7 +60,7 @@ export interface WorldInfo {
 }
 
 // --- Servers ---
-export type ServerLoader = 'vanilla' | 'fabric';
+export type ServerLoader = 'vanilla' | 'fabric' | 'forge' | 'neoforge';
 
 export interface ServerInstance {
   id: string;
@@ -159,6 +159,7 @@ export interface InstalledMod {
   projectId?: string;
   fileId?: string;
   title?: string;
+  iconUrl?: string;
 }
 
 /** A pending update for an installed item (newer file found at the provider). */

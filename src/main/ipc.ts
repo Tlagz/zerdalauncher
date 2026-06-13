@@ -29,7 +29,8 @@ import {
   deleteContent,
   addLocalContent,
   checkUpdates,
-  updateContent
+  updateContent,
+  fetchInstalledIcons
 } from './mods';
 import {
   installModpack,
@@ -194,11 +195,14 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.modsFiles, (_e, kind, provider, projectId: string, mc: string, loader: string) =>
     getContentFiles(kind, provider, projectId, mc, loader)
   );
-  ipcMain.handle(IPC.modsInstall, (_e, instanceId: string, kind, file, withDeps: boolean) =>
-    installContent(instanceId, kind, file, withDeps)
+  ipcMain.handle(IPC.modsInstall, (_e, instanceId: string, kind, file, withDeps: boolean, iconUrl?: string) =>
+    installContent(instanceId, kind, file, withDeps, iconUrl)
   );
   ipcMain.handle(IPC.modsInstalled, (_e, instanceId: string, kind) =>
     listInstalledContent(instanceId, kind)
+  );
+  ipcMain.handle(IPC.modsFetchIcons, (_e, instanceId: string, kind) =>
+    fetchInstalledIcons(instanceId, kind)
   );
   ipcMain.handle(IPC.modsToggle, (_e, instanceId: string, kind, fileName: string, enabled: boolean) =>
     toggleContent(instanceId, kind, fileName, enabled)
