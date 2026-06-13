@@ -3,6 +3,7 @@ import { IPC } from '../shared/ipc-channels';
 import type {
   Instance,
   Account,
+  SkinEntry,
   AppSettings,
   ModLoader,
   DownloadProgress,
@@ -235,6 +236,19 @@ const api = {
       ipcRenderer.invoke(IPC.accountsOfflineLogin, username),
     remove: (id: string): Promise<void> => ipcRenderer.invoke(IPC.accountsRemove, id),
     skin: (id: string): Promise<string | null> => ipcRenderer.invoke(IPC.accountsSkin, id)
+  },
+  skins: {
+    list: (): Promise<SkinEntry[]> => ipcRenderer.invoke(IPC.skinsList),
+    data: (id: string): Promise<string | null> => ipcRenderer.invoke(IPC.skinsData, id),
+    add: (): Promise<{ added: number; skins: SkinEntry[] }> => ipcRenderer.invoke(IPC.skinsAdd),
+    update: (
+      id: string,
+      patch: { name?: string; variant?: 'classic' | 'slim' }
+    ): Promise<SkinEntry[]> => ipcRenderer.invoke(IPC.skinsUpdate, id, patch),
+    delete: (id: string): Promise<SkinEntry[]> => ipcRenderer.invoke(IPC.skinsDelete, id),
+    apply: (accountId: string, skinId: string): Promise<Account> =>
+      ipcRenderer.invoke(IPC.skinsApply, accountId, skinId),
+    reset: (accountId: string): Promise<Account> => ipcRenderer.invoke(IPC.skinsReset, accountId)
   },
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.settingsGet),

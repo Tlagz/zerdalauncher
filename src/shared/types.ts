@@ -31,6 +31,16 @@ export interface Account {
   refreshToken?: string;
   expiresAt?: number;
   xuid?: string;
+  /** Id of the skin (from the local library) currently set on this account. */
+  skinId?: string;
+}
+
+/** A skin stored in the launcher's local skin library. */
+export interface SkinEntry {
+  id: string;
+  name: string;
+  variant: 'classic' | 'slim';
+  addedAt: number;
 }
 
 export interface VersionManifestEntry {

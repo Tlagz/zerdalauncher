@@ -16,8 +16,7 @@ export function SkinView({ account, width = 220, height = 320 }: { account: Acco
     let viewer: SkinViewer | null = null;
     let disposed = false;
 
-    const id = account.type === 'microsoft' ? account.uuid : account.username;
-    window.api.accounts.skin(id).then((skinUrl) => {
+    window.api.accounts.skin(account.id).then((skinUrl) => {
       if (disposed || !canvas || !skinUrl) return;
       viewer = new SkinViewer({ canvas, width, height, skin: skinUrl });
       viewer.animation = new IdleAnimation();
@@ -32,7 +31,7 @@ export function SkinView({ account, width = 220, height = 320 }: { account: Acco
       disposed = true;
       viewer?.dispose();
     };
-  }, [account.uuid, account.username, account.type, width, height]);
+  }, [account.id, account.skinId, width, height]);
 
   return <canvas ref={canvasRef} className="skin-canvas" />;
 }

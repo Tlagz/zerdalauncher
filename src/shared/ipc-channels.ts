@@ -77,6 +77,15 @@ export const IPC = {
   accountsActive: 'accounts:active',
   accountsSkin: 'accounts:skin',
 
+  // Skin library
+  skinsList: 'skins:list',
+  skinsAdd: 'skins:add',
+  skinsUpdate: 'skins:update',
+  skinsDelete: 'skins:delete',
+  skinsData: 'skins:data',
+  skinsApply: 'skins:apply',
+  skinsReset: 'skins:reset',
+
   // Settings
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',

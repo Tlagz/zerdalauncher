@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { SkinView } from './SkinView';
+import { SkinLibraryModal } from './SkinLibraryModal';
 import { confirmDialog } from '../ui/feedback';
 
 export function AccountsPage() {
@@ -9,6 +10,7 @@ export function AccountsPage() {
   const [offlineName, setOfflineName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSkins, setShowSkins] = useState(false);
 
   const handleMs = async () => {
     setBusy(true);
@@ -78,8 +80,15 @@ export function AccountsPage() {
               {active.type === 'microsoft' ? 'Microsoft · Premium' : 'Konto offline'}
             </div>
             <div className="skin-hint">🖱️ Przeciągnij, aby obrócić postać</div>
+            <button className="primary" style={{ marginTop: 14 }} onClick={() => setShowSkins(true)}>
+              🎨 Biblioteka skinów
+            </button>
           </div>
         </div>
+      )}
+
+      {showSkins && active && (
+        <SkinLibraryModal account={active} onClose={() => setShowSkins(false)} />
       )}
 
       <div className="section">

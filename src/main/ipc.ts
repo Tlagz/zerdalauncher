@@ -49,6 +49,15 @@ import {
   createOfflineAccount,
   ensureFreshToken
 } from './auth/accounts';
+import {
+  listSkins,
+  addSkinFromFile,
+  updateSkin,
+  deleteSkin,
+  skinDataUrl,
+  applySkin,
+  resetSkin
+} from './auth/skins';
 import { paths, instanceDir, instanceGameDir } from './utils/paths';
 import { readJson, writeJson } from './utils/store';
 import { fetchAsDataUrl } from './utils/http';
@@ -263,11 +272,18 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   // Accounts
   ipcMain.handle(IPC.accountsList, () => listAccounts());
   ipcMain.handle(IPC.accountsActive, () => activeAccountId());
-  // Fetch a player's skin texture as a data URL (for the 3D viewer). mc-heads
-  // accepts both UUIDs (premium) and names (offline), returning Steve as default.
-  ipcMain.handle(IPC.accountsSkin, (_e, id: string) =>
-    fetchAsDataUrl(`https://mc-heads.net/skin/${encodeURIComponent(id)}`)
-  );
+  // Fetch the skin texture as a data URL (for the 3D viewer). If the account has
+  // a local library skin set, that wins (so the viewer updates instantly); else
+  // mc-heads by UUID (premium) or name (offline), returning Steve as default.
+  ipcMain.handle(IPC.accountsSkin, (_e, accountOrId: string) => {
+    const acc = listAccounts().find((a) => a.id === accountOrId);
+    if (acc?.skinId) {
+      const local = skinDataUrl(acc.skinId);
+      if (local) return local;
+    }
+    const key = acc ? (acc.type === 'microsoft' ? acc.uuid : acc.username) : accountOrId;
+    return fetchAsDataUrl(`https://mc-heads.net/skin/${encodeURIComponent(key)}`);
+  });
   ipcMain.handle(IPC.accountsSelectActive, (_e, id: string) => selectActive(id));
   ipcMain.handle(IPC.accountsRemove, (_e, id: string) => removeAccount(id));
   ipcMain.handle(IPC.accountsOfflineLogin, (_e, username: string) => createOfflineAccount(username));
@@ -278,6 +294,37 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     selectActive(acc.id);
     return acc;
   });
+
+  // Skin library
+  ipcMain.handle(IPC.skinsList, () => listSkins());
+  ipcMain.handle(IPC.skinsData, (_e, id: string) => skinDataUrl(id));
+  ipcMain.handle(IPC.skinsAdd, async () => {
+    const win = getMainWindow() ?? undefined;
+    const res = await dialog.showOpenDialog(win!, {
+      title: 'Wybierz skina (PNG 64×64)',
+      filters: [{ name: 'Skin PNG', extensions: ['png'] }],
+      properties: ['openFile', 'multiSelections']
+    });
+    if (res.canceled || res.filePaths.length === 0) return { added: 0, skins: listSkins() };
+    let added = 0;
+    let lastError: string | null = null;
+    for (const fp of res.filePaths) {
+      try {
+        addSkinFromFile(fp);
+        added++;
+      } catch (e) {
+        lastError = (e as Error).message;
+      }
+    }
+    if (added === 0 && lastError) throw new Error(lastError);
+    return { added, skins: listSkins() };
+  });
+  ipcMain.handle(IPC.skinsUpdate, (_e, id: string, patch) => updateSkin(id, patch));
+  ipcMain.handle(IPC.skinsDelete, (_e, id: string) => deleteSkin(id));
+  ipcMain.handle(IPC.skinsApply, (_e, accountId: string, skinId: string) =>
+    applySkin(accountId, skinId)
+  );
+  ipcMain.handle(IPC.skinsReset, (_e, accountId: string) => resetSkin(accountId));
 
   // Settings
   ipcMain.handle(IPC.settingsGet, () => getSettings());
