@@ -20,7 +20,8 @@ import type {
   ServerLoader,
   ServerStatus,
   TunnelStatus,
-  JreStatus
+  JreStatus,
+  LoaderVersionInfo
 } from '../shared/types';
 
 const api = {
@@ -136,10 +137,9 @@ const api = {
     }
   },
   loaders: {
-    fabricVersions: (mc: string): Promise<string[]> => ipcRenderer.invoke(IPC.fabricVersions, mc),
-    forgeVersions: (mc: string): Promise<{ latest?: string; recommended?: string }> =>
-      ipcRenderer.invoke(IPC.forgeVersions, mc),
-    neoforgeVersions: (mc: string): Promise<{ latest?: string; versions: string[] }> =>
+    fabricVersions: (mc: string): Promise<LoaderVersionInfo> => ipcRenderer.invoke(IPC.fabricVersions, mc),
+    forgeVersions: (mc: string): Promise<LoaderVersionInfo> => ipcRenderer.invoke(IPC.forgeVersions, mc),
+    neoforgeVersions: (mc: string): Promise<LoaderVersionInfo> =>
       ipcRenderer.invoke(IPC.neoforgeVersions, mc)
   },
   mods: {

@@ -7,7 +7,7 @@ import { SkinLibraryModal } from './SkinLibraryModal';
 import { alertDialog } from '../ui/feedback';
 import type { Instance, WorldInfo } from '../../shared/types';
 
-const RECENT_LIMIT = 6;
+const RECENT_LIMIT = 2;
 const WORLDS_PER_CARD = 3;
 
 function fmtPlaytime(ms?: number): string {
@@ -38,31 +38,34 @@ function RecentInstanceRow({ instance }: { instance: Instance }) {
   };
 
   return (
-    <div className="mod-row home-recent-row">
-      <InstanceIcon instance={instance} />
-      <div className="mod-info">
-        <div className="mod-title">{instance.name}</div>
-        <div className="mod-sub">
-          {instance.mcVersion} · {instance.loader}
-          {fmtPlaytime(instance.playtimeMs) && ` · ⏱ ${fmtPlaytime(instance.playtimeMs)}`}
-          {fmtDate(instance.lastPlayed) && ` · ostatnio: ${fmtDate(instance.lastPlayed)}`}
-        </div>
-        {(worlds.length > 0 || instance.serverAddress) && (
-          <div className="home-quickplay-list">
-            {worlds.slice(0, WORLDS_PER_CARD).map((w) => (
-              <button key={w.name} className="ghost home-quickplay-chip" disabled={isLaunching} onClick={() => play(w.name)}>
-                🌍 {w.name}
-              </button>
-            ))}
-            {instance.serverAddress && (
-              <button className="ghost home-quickplay-chip" disabled={isLaunching} onClick={() => play()}>
-                🌐 {instance.serverAddress}
-              </button>
-            )}
-          </div>
-        )}
+    <div className="home-recent-card">
+      <div className="home-recent-head">
+        <InstanceIcon instance={instance} />
+        <div className="instance-name">{instance.name}</div>
       </div>
-      <button className="primary" disabled={isLaunching} onClick={() => play()}>
+      <div className="instance-meta">
+        <span className="tag">{instance.mcVersion}</span>
+        <span className={`tag ${instance.loader}`}>{instance.loader}</span>
+      </div>
+      <div className="mod-sub">
+        {fmtPlaytime(instance.playtimeMs) && `⏱ ${fmtPlaytime(instance.playtimeMs)}`}
+        {fmtDate(instance.lastPlayed) && `${fmtPlaytime(instance.playtimeMs) ? ' · ' : ''}ostatnio: ${fmtDate(instance.lastPlayed)}`}
+      </div>
+      {(worlds.length > 0 || instance.serverAddress) && (
+        <div className="home-quickplay-list">
+          {worlds.slice(0, WORLDS_PER_CARD).map((w) => (
+            <button key={w.name} className="ghost home-quickplay-chip" disabled={isLaunching} onClick={() => play(w.name)}>
+              🌍 {w.name}
+            </button>
+          ))}
+          {instance.serverAddress && (
+            <button className="ghost home-quickplay-chip" disabled={isLaunching} onClick={() => play()}>
+              🌐 {instance.serverAddress}
+            </button>
+          )}
+        </div>
+      )}
+      <button className="primary" style={{ marginTop: 'auto' }} disabled={isLaunching} onClick={() => play()}>
         {isLaunching ? 'Uruchamianie…' : '▶ Graj'}
       </button>
     </div>
@@ -88,40 +91,40 @@ export function HomePage() {
         </div>
       </div>
 
-      {active && (
-        <div className="section skin-section">
-          <div className="skin-stage">
-            <SkinView account={active} key={active.id} />
-          </div>
-          <div className="skin-info">
-            <div className="skin-name">{active.username}</div>
+      {showSkins && active && <SkinLibraryModal account={active} onClose={() => setShowSkins(false)} />}
+
+      <div className="home-layout">
+        <div className="section">
+          <h3>Ostatnio grane</h3>
+          {recent.length === 0 ? (
+            <div className="mod-empty">
+              Jeszcze nic nie grane.{' '}
+              <button className="ghost" onClick={() => setPage('instances')}>
+                Przejdź do instancji →
+              </button>
+            </div>
+          ) : (
+            <div className="home-recent-grid">
+              {recent.map((i) => (
+                <RecentInstanceRow key={i.id} instance={i} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {active && (
+          <div className="section home-hero">
             <div className="skin-type">
               {active.type === 'microsoft' ? 'Microsoft · Premium' : 'Konto offline'}
             </div>
+            <div className="skin-name">{active.username}</div>
+            <div className="skin-stage">
+              <SkinView account={active} key={active.id} width={150} height={210} />
+            </div>
             <div className="skin-hint">🖱️ Przeciągnij, aby obrócić postać</div>
-            <button className="primary" style={{ marginTop: 14 }} onClick={() => setShowSkins(true)}>
+            <button className="primary" onClick={() => setShowSkins(true)}>
               🎨 Biblioteka skinów
             </button>
-          </div>
-        </div>
-      )}
-
-      {showSkins && active && <SkinLibraryModal account={active} onClose={() => setShowSkins(false)} />}
-
-      <div className="section">
-        <h3>Ostatnio grane</h3>
-        {recent.length === 0 ? (
-          <div className="mod-empty">
-            Jeszcze nic nie grane.{' '}
-            <button className="ghost" onClick={() => setPage('instances')}>
-              Przejdź do instancji →
-            </button>
-          </div>
-        ) : (
-          <div className="mod-list">
-            {recent.map((i) => (
-              <RecentInstanceRow key={i.id} instance={i} />
-            ))}
           </div>
         )}
       </div>

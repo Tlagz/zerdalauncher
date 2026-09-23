@@ -10,6 +10,12 @@ export async function getJson<T>(url: string, headers?: Record<string, string>):
   return (await res.json()) as T;
 }
 
+export async function getText(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`GET ${url} -> ${res.status}`);
+  return res.text();
+}
+
 export async function postJson<T>(
   url: string,
   body: unknown,

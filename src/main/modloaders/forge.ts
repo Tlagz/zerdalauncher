@@ -1,12 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-import { getJson, downloadFile } from '../utils/http';
+import { getJson, getText, downloadFile } from '../utils/http';
 import { paths } from '../utils/paths';
 import { detectJava } from '../utils/java';
 import { runServerInstaller } from './serverInstaller';
+import type { LoaderVersionInfo } from '../../shared/types';
 
 const FORGE_PROMOTIONS = 'https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json';
+const FORGE_METADATA = 'https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml';
 const FORGE_INSTALLER = (full: string) =>
   `https://maven.minecraftforge.net/net/minecraftforge/forge/${full}/forge-${full}-installer.jar`;
 
@@ -14,12 +16,41 @@ interface ForgePromotions {
   promos: Record<string, string>;
 }
 
-export async function forgeVersionsFor(mcVersion: string): Promise<{ latest?: string; recommended?: string }> {
-  const data = await getJson<ForgePromotions>(FORGE_PROMOTIONS);
-  return {
-    recommended: data.promos[`${mcVersion}-recommended`],
-    latest: data.promos[`${mcVersion}-latest`]
-  };
+function compareForgeBuild(a: string, b: string): number {
+  const pa = a.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  const pb = b.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/**
+ * Every Forge build ever published, not just the "recommended"/"latest" ones
+ * promoted on the website — lets users pick unstable/beta builds too.
+ */
+export async function forgeVersionsFor(mcVersion: string): Promise<LoaderVersionInfo> {
+  const [promotions, metadata] = await Promise.all([
+    getJson<ForgePromotions>(FORGE_PROMOTIONS),
+    getText(FORGE_METADATA)
+  ]);
+  const recommended = promotions.promos[`${mcVersion}-recommended`];
+  const latest = promotions.promos[`${mcVersion}-latest`];
+
+  const prefix = `${mcVersion}-`;
+  const allBuilds = Array.from(metadata.matchAll(/<version>([^<]+)<\/version>/g))
+    .map((m) => m[1])
+    .filter((v) => v.startsWith(prefix))
+    .map((v) => v.slice(prefix.length))
+    .sort(compareForgeBuild)
+    .reverse();
+
+  const promoted = new Set([recommended, latest].filter(Boolean) as string[]);
+  const stable = [recommended, latest].filter(Boolean) as string[];
+  const unstable = allBuilds.filter((v) => !promoted.has(v));
+
+  return { recommended, latest, stable, unstable };
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
-import type { ModLoader } from '../../shared/types';
+import type { LoaderVersionInfo, ModLoader } from '../../shared/types';
 
 interface Props {
   onClose: () => void;
@@ -16,10 +16,9 @@ export function CreateInstanceModal({ onClose }: Props) {
   const [name, setName] = useState('');
   const [mcVersion, setMcVersion] = useState('');
   const [loader, setLoader] = useState<ModLoader>('vanilla');
-  const [loaderVersions, setLoaderVersions] = useState<string[]>([]);
+  const [loaderInfo, setLoaderInfo] = useState<LoaderVersionInfo>({ stable: [], unstable: [] });
   const [loaderVersion, setLoaderVersion] = useState('');
-  const [forgeInfo, setForgeInfo] = useState<{ latest?: string; recommended?: string }>({});
-  const [neoVersions, setNeoVersions] = useState<string[]>([]);
+  const [showUnstableLoader, setShowUnstableLoader] = useState(false);
   const [ramMb, setRamMb] = useState(settings?.defaultRamMb ?? 2048);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,31 +35,20 @@ export function CreateInstanceModal({ onClose }: Props) {
   useEffect(() => {
     if (!mcVersion) return;
     setLoaderVersion('');
-    if (loader === 'fabric') {
-      window.api.loaders
-        .fabricVersions(mcVersion)
-        .then((v) => {
-          setLoaderVersions(v);
-          setLoaderVersion(v[0] ?? '');
-        })
-        .catch(() => setLoaderVersions([]));
-    } else if (loader === 'forge') {
-      window.api.loaders
-        .forgeVersions(mcVersion)
-        .then((info) => {
-          setForgeInfo(info);
-          setLoaderVersion(info.recommended ?? info.latest ?? '');
-        })
-        .catch(() => setForgeInfo({}));
-    } else if (loader === 'neoforge') {
-      window.api.loaders
-        .neoforgeVersions(mcVersion)
-        .then((info) => {
-          setNeoVersions(info.versions);
-          setLoaderVersion(info.latest ?? '');
-        })
-        .catch(() => setNeoVersions([]));
-    }
+    setShowUnstableLoader(false);
+    const fetchers: Record<string, ((mc: string) => Promise<LoaderVersionInfo>) | undefined> = {
+      fabric: window.api.loaders.fabricVersions,
+      forge: window.api.loaders.forgeVersions,
+      neoforge: window.api.loaders.neoforgeVersions
+    };
+    const fetcher = fetchers[loader];
+    if (!fetcher) return;
+    fetcher(mcVersion)
+      .then((info) => {
+        setLoaderInfo(info);
+        setLoaderVersion(info.recommended ?? info.latest ?? '');
+      })
+      .catch(() => setLoaderInfo({ stable: [], unstable: [] }));
   }, [loader, mcVersion]);
 
   const filteredVersions = useMemo(
@@ -147,46 +135,44 @@ export function CreateInstanceModal({ onClose }: Props) {
           </div>
         </div>
 
-        {loader === 'fabric' && (
+        {loader !== 'vanilla' && (
           <div className="form-row">
-            <label>Wersja Fabric Loader</label>
+            <label>Wersja {loader === 'fabric' ? 'Fabric Loader' : loader === 'forge' ? 'Forge' : 'NeoForge'}</label>
             <select value={loaderVersion} onChange={(e) => setLoaderVersion(e.target.value)}>
-              {loaderVersions.length === 0 && <option>Ładowanie…</option>}
-              {loaderVersions.map((v) => (
+              {loaderInfo.stable.length === 0 && loaderInfo.unstable.length === 0 && (
+                <option>
+                  {loader === 'neoforge' ? 'Brak wersji dla tego MC (NeoForge: 1.20.2+)' : 'Brak danych dla tej wersji'}
+                </option>
+              )}
+              {loaderInfo.stable.map((v) => (
                 <option key={v} value={v}>
                   {v}
+                  {v === loaderInfo.recommended ? ' (zalecana)' : v === loaderInfo.latest ? ' (najnowsza)' : ''}
                 </option>
               ))}
+              {showUnstableLoader &&
+                loaderInfo.unstable.map((v) => (
+                  <option key={v} value={v}>
+                    {v} (niestabilna)
+                  </option>
+                ))}
             </select>
-          </div>
-        )}
-
-        {loader === 'forge' && (
-          <div className="form-row">
-            <label>Wersja Forge</label>
-            <select value={loaderVersion} onChange={(e) => setLoaderVersion(e.target.value)}>
-              {forgeInfo.recommended && (
-                <option value={forgeInfo.recommended}>{forgeInfo.recommended} (zalecana)</option>
-              )}
-              {forgeInfo.latest && forgeInfo.latest !== forgeInfo.recommended && (
-                <option value={forgeInfo.latest}>{forgeInfo.latest} (najnowsza)</option>
-              )}
-              {!forgeInfo.recommended && !forgeInfo.latest && <option>Brak danych dla tej wersji</option>}
-            </select>
-          </div>
-        )}
-
-        {loader === 'neoforge' && (
-          <div className="form-row">
-            <label>Wersja NeoForge</label>
-            <select value={loaderVersion} onChange={(e) => setLoaderVersion(e.target.value)}>
-              {neoVersions.length === 0 && <option value="">Brak wersji dla tego MC (NeoForge: 1.20.2+)</option>}
-              {neoVersions.map((v, i) => (
-                <option key={v} value={v}>
-                  {v} {i === 0 ? '(najnowsza)' : ''}
-                </option>
-              ))}
-            </select>
+            {loaderInfo.unstable.length > 0 && (
+              <label style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', textTransform: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={showUnstableLoader}
+                  onChange={(e) => {
+                    setShowUnstableLoader(e.target.checked);
+                    if (!e.target.checked && !loaderInfo.stable.includes(loaderVersion)) {
+                      setLoaderVersion(loaderInfo.recommended ?? loaderInfo.latest ?? loaderInfo.stable[0] ?? '');
+                    }
+                  }}
+                  style={{ width: 'auto' }}
+                />
+                Pokaż niestabilne wersje ({loaderInfo.unstable.length})
+              </label>
+            )}
           </div>
         )}
 

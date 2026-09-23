@@ -464,7 +464,7 @@ async function resolveLaunchVersion(
 
 /** Newest available loader version for an MC version, or undefined if none. */
 async function latestLoaderVersion(loader: ModLoader, mc: string): Promise<string | undefined> {
-  if (loader === 'fabric') return (await fabricLoaders(mc))[0];
+  if (loader === 'fabric') return (await fabricLoaders(mc)).latest;
   if (loader === 'forge') {
     const f = await forgeVersionsFor(mc);
     return f.recommended ?? f.latest;

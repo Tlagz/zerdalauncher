@@ -26,8 +26,7 @@ export default function App() {
 
   // Apply the selected UI theme to <html data-theme="…">.
   useEffect(() => {
-    const t = settings?.theme === 'crimson' ? 'default' : settings?.theme || 'default';
-    document.documentElement.dataset.theme = t;
+    document.documentElement.dataset.theme = settings?.theme || 'default';
   }, [settings?.theme]);
 
   // A pack opened via double-click (.zerda file association) is imported by the

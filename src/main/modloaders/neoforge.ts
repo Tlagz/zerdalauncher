@@ -5,6 +5,7 @@ import { getJson, downloadFile } from '../utils/http';
 import { paths } from '../utils/paths';
 import { detectJava } from '../utils/java';
 import { runServerInstaller } from './serverInstaller';
+import type { LoaderVersionInfo } from '../../shared/types';
 
 const NEO_VERSIONS =
   'https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge';
@@ -45,21 +46,14 @@ function compareNeo(a: string, b: string): number {
   return 0;
 }
 
-export async function neoforgeVersionsFor(
-  mcVersion: string
-): Promise<{ latest?: string; versions: string[] }> {
+export async function neoforgeVersionsFor(mcVersion: string): Promise<LoaderVersionInfo> {
   const prefix = neoPrefix(mcVersion);
-  if (!prefix) return { versions: [] };
+  if (!prefix) return { stable: [], unstable: [] };
   const data = await getJson<NeoVersionList>(NEO_VERSIONS);
-  const matching = data.versions
-    .filter((v) => v.startsWith(prefix) && !v.includes('beta'))
-    .sort(compareNeo)
-    .reverse();
-  // Fall back to including betas if nothing stable matched.
-  const list = matching.length
-    ? matching
-    : data.versions.filter((v) => v.startsWith(prefix)).sort(compareNeo).reverse();
-  return { latest: list[0], versions: list };
+  const matching = data.versions.filter((v) => v.startsWith(prefix));
+  const stable = matching.filter((v) => !v.includes('beta')).sort(compareNeo).reverse();
+  const unstable = matching.filter((v) => v.includes('beta')).sort(compareNeo).reverse();
+  return { latest: stable[0] ?? unstable[0], stable, unstable };
 }
 
 /**

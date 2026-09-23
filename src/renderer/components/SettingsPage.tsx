@@ -97,6 +97,7 @@ export function SettingsPage() {
           {[
             { id: 'default', label: 'Domyślny', desc: 'Fiolet + cyan' },
             { id: 'dark', label: 'Ciemny', desc: 'Czarny + stal' },
+            { id: 'crimson', label: 'Crimson', desc: 'Czerwień + czerń' },
             { id: 'light', label: 'Jasny', desc: 'Dzienny' }
           ].map((t) => (
             <button

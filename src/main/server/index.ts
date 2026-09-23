@@ -130,7 +130,7 @@ export async function createServer(
 
   if (opts.loader === 'fabric') {
     progress(0, 1, 'Pobieram server.jar…');
-    const loaderVer = (await fabricLoaders(opts.mcVersion))[0];
+    const loaderVer = (await fabricLoaders(opts.mcVersion)).latest;
     if (!loaderVer) throw new Error('Brak Fabric Loader dla tej wersji Minecraft.');
     const installers = await getJson<Array<{ version: string }>>(
       'https://meta.fabricmc.net/v2/versions/installer'

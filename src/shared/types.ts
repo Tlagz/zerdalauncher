@@ -62,6 +62,16 @@ export interface AppSettings {
   theme: string;
 }
 
+/** Mod loader build versions for a given MC version, split into stable/unstable. */
+export interface LoaderVersionInfo {
+  /** Forge only: officially "recommended" build. */
+  recommended?: string;
+  latest?: string;
+  stable: string[];
+  /** Beta/unpromoted/pre-release builds — hidden behind a toggle in the UI. */
+  unstable: string[];
+}
+
 /** Status of a Mojang-provided Java runtime component (manual downloader in Settings). */
 export interface JreStatus {
   component: string;
