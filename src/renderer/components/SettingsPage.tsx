@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
-import type { AppSettings } from '../../shared/types';
+import { alertDialog } from '../ui/feedback';
+import type { AppSettings, JreStatus } from '../../shared/types';
 
 function updateLabel(s: ReturnType<typeof useStore.getState>['updateStatus']): string {
   switch (s?.state) {
@@ -30,12 +31,40 @@ export function SettingsPage() {
   const [version, setVersion] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [runtimes, setRuntimes] = useState<JreStatus[]>([]);
+  const [runtimeBusy, setRuntimeBusy] = useState<string | null>(null);
+  const [runtimeProgress, setRuntimeProgress] = useState<{ current: number; total: number } | null>(
+    null
+  );
+
+  const loadRuntimes = () => window.api.java.list().then(setRuntimes);
 
   useEffect(() => setLocal(settings), [settings]);
   useEffect(() => {
     window.api.system.detectJava().then(setDetectedJava);
     window.api.system.appVersion().then(setVersion);
+    loadRuntimes();
+    return window.api.java.onProgress((p) => {
+      setRuntimeProgress({ current: p.current, total: p.total });
+    });
   }, []);
+
+  const downloadRuntime = async (component: string) => {
+    setRuntimeBusy(component);
+    setRuntimeProgress(null);
+    try {
+      setRuntimes(await window.api.java.download(component));
+    } catch (e) {
+      alertDialog({ title: 'Pobieranie Javy nie powiodło się', message: (e as Error).message, tone: 'error' });
+    } finally {
+      setRuntimeBusy(null);
+      setRuntimeProgress(null);
+    }
+  };
+
+  const deleteRuntime = async (component: string) => {
+    setRuntimes(await window.api.java.delete(component));
+  };
 
   if (!local) return null;
 
@@ -102,6 +131,36 @@ export function SettingsPage() {
                 Wykryto: <code>{detectedJava}</code>
               </div>
             )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <label>Środowiska Java do pobrania (launcher i tak pobierze automatycznie przy starcie gry)</label>
+          <div className="mod-list" style={{ marginTop: 8 }}>
+            {runtimes.map((r) => (
+              <div className="mod-row" key={r.component}>
+                <div className="mod-icon placeholder">☕</div>
+                <div className="mod-info">
+                  <div className="mod-title">Java {r.javaMajor}</div>
+                  <div className="mod-sub">
+                    {r.mcRange}
+                    {r.installed ? ' · zainstalowana ✓' : ''}
+                    {runtimeBusy === r.component && runtimeProgress
+                      ? ` · pobieram ${runtimeProgress.current}/${runtimeProgress.total}`
+                      : ''}
+                  </div>
+                </div>
+                {r.installed ? (
+                  <button className="danger" disabled={runtimeBusy === r.component} onClick={() => deleteRuntime(r.component)}>
+                    🗑 Usuń
+                  </button>
+                ) : (
+                  <button className="primary" disabled={runtimeBusy === r.component} onClick={() => downloadRuntime(r.component)}>
+                    {runtimeBusy === r.component ? 'Pobieram…' : '⬇ Pobierz'}
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

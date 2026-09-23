@@ -62,6 +62,14 @@ export interface AppSettings {
   theme: string;
 }
 
+/** Status of a Mojang-provided Java runtime component (manual downloader in Settings). */
+export interface JreStatus {
+  component: string;
+  javaMajor: number;
+  mcRange: string;
+  installed: boolean;
+}
+
 export interface WorldInfo {
   name: string;
   folder: string;

@@ -94,6 +94,12 @@ export const IPC = {
   systemDetectJava: 'system:detectJava',
   appVersion: 'app:version',
 
+  // Java runtimes (manual download/management)
+  javaList: 'java:list',
+  javaDownload: 'java:download',
+  javaDelete: 'java:delete',
+  javaProgress: 'java:progress',
+
   // Self-update
   updateCheck: 'update:check',
   updateInstall: 'update:install',

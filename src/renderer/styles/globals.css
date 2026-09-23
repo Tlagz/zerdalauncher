@@ -2070,6 +2070,21 @@ input[type='checkbox'] {
   text-overflow: ellipsis;
 }
 
+/* ---------- Home / recently played ---------- */
+.home-recent-row {
+  flex-wrap: wrap;
+}
+.home-quickplay-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.home-quickplay-chip {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
 /* ---------- Login ---------- */
 .login-screen {
   position: relative;

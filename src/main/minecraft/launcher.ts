@@ -12,6 +12,8 @@ export interface LaunchOptions {
   javaExe: string;
   onExit: (code: number | null) => void;
   onLog?: (line: string) => void;
+  /** Launch straight into this saved world (Quick Play), bypassing the main menu. */
+  quickPlayWorld?: string;
 }
 
 export function launchGame(opts: LaunchOptions): void {
@@ -53,8 +55,11 @@ export function launchGame(opts: LaunchOptions): void {
       .map((a) => substituteVars(a, prepared.data, account, instance, prepared, classpath));
   }
 
-  // Quick Play: auto-join a server on launch (MC 1.20+ / modern versions).
-  if (instance.serverAddress?.trim()) {
+  // Quick Play: jump straight into a saved world, or auto-join a server (MC 1.20+).
+  // A chosen world takes priority over the instance's default auto-join server.
+  if (opts.quickPlayWorld?.trim()) {
+    gameArgs.push('--quickPlaySingleplayer', opts.quickPlayWorld.trim());
+  } else if (instance.serverAddress?.trim()) {
     gameArgs.push('--quickPlayMultiplayer', instance.serverAddress.trim());
   }
 

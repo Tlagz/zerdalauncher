@@ -14,7 +14,7 @@ import {
 } from './minecraft/instances';
 import { fetchVersionManifest } from './minecraft/manifest';
 import { prepareVersion } from './minecraft/downloader';
-import { resolveJava } from './minecraft/jre';
+import { resolveJava, listJreStatus, deleteJre, ensureMojangJre } from './minecraft/jre';
 import { launchGame } from './minecraft/launcher';
 import { fabricLoaders, installFabric } from './modloaders/fabric';
 import { forgeVersionsFor, installForge } from './modloaders/forge';
@@ -340,6 +340,19 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.systemDetectJava, () => detectJava(getSettings().javaPath || undefined));
   ipcMain.handle(IPC.appVersion, () => app.getVersion());
 
+  // Java runtimes (manual download/management)
+  ipcMain.handle(IPC.javaList, () => listJreStatus());
+  ipcMain.handle(IPC.javaDownload, async (_e, component: string) => {
+    await ensureMojangJre(component, (_phase, current, total, message) =>
+      emitToAll(IPC.javaProgress, { component, current, total, message })
+    );
+    return listJreStatus();
+  });
+  ipcMain.handle(IPC.javaDelete, (_e, component: string) => {
+    deleteJre(component);
+    return listJreStatus();
+  });
+
   // Self-update
   ipcMain.handle(IPC.updateCheck, () => {
     checkForUpdates();
@@ -348,7 +361,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.updateInstall, () => quitAndInstall());
 
   // Launch
-  ipcMain.handle(IPC.mcLaunch, async (_e, instanceId: string) => {
+  ipcMain.handle(IPC.mcLaunch, async (_e, instanceId: string, opts?: { world?: string }) => {
     const instance = getInstance(instanceId);
     if (!instance) throw new Error('Brak instancji.');
     const activeId = activeAccountId();
@@ -388,6 +401,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
         account: acc,
         prepared,
         javaExe,
+        quickPlayWorld: opts?.world,
         onExit: (code) => {
           // Accumulate playtime for stats, drop Discord presence back to idle.
           const inst = getInstance(instance.id);

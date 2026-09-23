@@ -12,7 +12,7 @@ import type {
 } from '../shared/types';
 
 interface UiState {
-  page: 'instances' | 'servers' | 'accounts' | 'settings';
+  page: 'home' | 'instances' | 'servers' | 'accounts' | 'settings';
   setPage: (p: UiState['page']) => void;
 
   instances: Instance[];
@@ -48,7 +48,7 @@ interface UiState {
 const LOG_CAP = 200_000; // chars kept per instance
 
 export const useStore = create<UiState>((set) => ({
-  page: 'instances',
+  page: 'home',
   setPage: (page) => set({ page }),
 
   instances: [],

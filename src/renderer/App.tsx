@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from './store';
 import { Sidebar } from './components/Sidebar';
+import { HomePage } from './components/HomePage';
 import { InstancesPage } from './components/InstancesPage';
 import { ServersPage } from './components/ServersPage';
 import { AccountsPage } from './components/AccountsPage';
@@ -77,6 +78,7 @@ export default function App() {
         <Sidebar />
         <div className="main">
           <div key={page} className="page-fade">
+            {page === 'home' && <HomePage />}
             {page === 'instances' && <InstancesPage />}
             {page === 'servers' && <ServersPage />}
             {page === 'accounts' && <AccountsPage />}

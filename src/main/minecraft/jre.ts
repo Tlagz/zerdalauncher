@@ -5,7 +5,7 @@ import { paths } from '../utils/paths';
 import { getJavaMajor, findSystemJava } from '../utils/java';
 import type { ProgressCallback } from './downloader';
 import type { VersionData } from './manifest';
-import type { AppSettings, Instance } from '../../shared/types';
+import type { AppSettings, Instance, JreStatus } from '../../shared/types';
 
 const RUNTIME_MANIFEST =
   'https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json';
@@ -50,6 +50,32 @@ function javaExePath(dir: string): string {
   return process.platform === 'win32'
     ? path.join(dir, 'bin', 'javaw.exe')
     : path.join(dir, 'bin', 'java');
+}
+
+/** Known Mojang-provided runtime components, for the manual downloader in Settings. */
+export const RUNTIME_COMPONENTS: Array<{ component: string; javaMajor: number; mcRange: string }> = [
+  { component: 'jre-legacy', javaMajor: 8, mcRange: 'do 1.16.5' },
+  { component: 'java-runtime-alpha', javaMajor: 16, mcRange: '1.17 – 1.17.1' },
+  { component: 'java-runtime-beta', javaMajor: 17, mcRange: '1.18 – 1.20.4' },
+  { component: 'java-runtime-gamma', javaMajor: 17, mcRange: '1.20.5 – 1.20.6' },
+  { component: 'java-runtime-delta', javaMajor: 21, mcRange: '1.21+' }
+];
+
+/** Which Mojang runtimes are already downloaded for this platform. */
+export function listJreStatus(): JreStatus[] {
+  const pk = platformKey();
+  return RUNTIME_COMPONENTS.map(({ component, javaMajor, mcRange }) => ({
+    component,
+    javaMajor,
+    mcRange,
+    installed: fs.existsSync(javaExePath(path.join(paths.runtimes, component, pk)))
+  }));
+}
+
+/** Remove a downloaded Mojang runtime from disk. */
+export function deleteJre(component: string): void {
+  const pk = platformKey();
+  fs.rmSync(path.join(paths.runtimes, component, pk), { recursive: true, force: true });
 }
 
 /**

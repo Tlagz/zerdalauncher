@@ -19,7 +19,8 @@ import type {
   ServerInstance,
   ServerLoader,
   ServerStatus,
-  TunnelStatus
+  TunnelStatus,
+  JreStatus
 } from '../shared/types';
 
 const api = {
@@ -110,7 +111,8 @@ const api = {
       latest: { release: string; snapshot: string };
       versions: Array<{ id: string; type: string; releaseTime: string }>;
     }> => ipcRenderer.invoke(IPC.mcVersions),
-    launch: (id: string): Promise<void> => ipcRenderer.invoke(IPC.mcLaunch, id),
+    launch: (id: string, opts?: { world?: string }): Promise<void> =>
+      ipcRenderer.invoke(IPC.mcLaunch, id, opts),
     onProgress: (cb: (p: DownloadProgress) => void): (() => void) => {
       const fn = (_: unknown, p: DownloadProgress) => cb(p);
       ipcRenderer.on(IPC.mcLaunchProgress, fn);
@@ -257,6 +259,24 @@ const api = {
   system: {
     detectJava: (): Promise<string | null> => ipcRenderer.invoke(IPC.systemDetectJava),
     appVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appVersion)
+  },
+  java: {
+    list: (): Promise<JreStatus[]> => ipcRenderer.invoke(IPC.javaList),
+    download: (component: string): Promise<JreStatus[]> =>
+      ipcRenderer.invoke(IPC.javaDownload, component),
+    delete: (component: string): Promise<JreStatus[]> => ipcRenderer.invoke(IPC.javaDelete, component),
+    onProgress: (
+      cb: (p: { component: string; current: number; total: number; message?: string }) => void
+    ): (() => void) => {
+      const fn = (
+        _: unknown,
+        p: { component: string; current: number; total: number; message?: string }
+      ) => cb(p);
+      ipcRenderer.on(IPC.javaProgress, fn);
+      return () => {
+        ipcRenderer.off(IPC.javaProgress, fn);
+      };
+    }
   },
   updates: {
     check: (): Promise<UpdateStatus> => ipcRenderer.invoke(IPC.updateCheck),

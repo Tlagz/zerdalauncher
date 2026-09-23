@@ -13,10 +13,10 @@ export function useLaunch(instance: Instance) {
     (launchStatus?.instanceId === instance.id &&
       ['preparing', 'downloading', 'launching'].includes(launchStatus.state));
 
-  const launch = async () => {
+  const launch = async (world?: string) => {
     setBusy(true);
     try {
-      await window.api.mc.launch(instance.id);
+      await window.api.mc.launch(instance.id, world ? { world } : undefined);
       await refreshInstances();
     } catch (e) {
       alertDialog({ title: 'Nie udało się uruchomić', message: (e as Error).message, tone: 'error' });

@@ -2,6 +2,7 @@ import { useStore } from '../store';
 import logo from '../assets/logo.png';
 
 const NAV = [
+  { id: 'home', label: 'Start', icon: '🏠' },
   { id: 'instances', label: 'Instancje', icon: '🎮' },
   { id: 'servers', label: 'Serwery', icon: '🖧' },
   { id: 'accounts', label: 'Konta', icon: '👤' },

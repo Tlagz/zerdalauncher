@@ -101,7 +101,7 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
             <span className="tag">{instance.ramMb} MB</span>
           </div>
         </div>
-        <button className="primary detail-play" onClick={launch} disabled={isLaunching}>
+        <button className="primary detail-play" onClick={() => launch()} disabled={isLaunching}>
           {isLaunching ? 'Uruchamianie…' : '▶ Graj'}
         </button>
       </div>
