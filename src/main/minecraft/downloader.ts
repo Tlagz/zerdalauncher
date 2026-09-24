@@ -47,6 +47,7 @@ export async function prepareVersion(
 
   const libs = data.libraries.filter((l) => evaluateRules(l.rules));
   const classpath: string[] = [];
+  const seenClasspathEntries = new Set<string>();
   const nativesDir = path.join(paths.natives, instanceId);
   fs.mkdirSync(nativesDir, { recursive: true });
 
@@ -54,7 +55,14 @@ export async function prepareVersion(
   for (let i = 0; i < libs.length; i++) {
     const lib = libs[i];
     const cpEntries = await downloadLibrary(lib, nativesDir);
-    classpath.push(...cpEntries);
+    // A loader's own libraries commonly re-declare ones vanilla already ships
+    // (e.g. commons-lang3) — a duplicate classpath entry crashes NeoForge's/
+    // Forge's BootstrapLauncher (union filesystem built from a map, no dupe keys).
+    for (const entry of cpEntries) {
+      if (seenClasspathEntries.has(entry)) continue;
+      seenClasspathEntries.add(entry);
+      classpath.push(entry);
+    }
     progress('libraries', i + 1, libs.length, lib.name);
   }
   classpath.push(clientJar);
