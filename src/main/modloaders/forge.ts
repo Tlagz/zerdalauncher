@@ -26,29 +26,51 @@ function compareForgeBuild(a: string, b: string): number {
   return 0;
 }
 
+/** Every Forge build id (with the `<mcVersion>-` prefix stripped) for one MC version. */
+async function forgeBuildList(mcVersion: string): Promise<string[]> {
+  const metadata = await getText(FORGE_METADATA);
+  const prefix = `${mcVersion}-`;
+  return Array.from(metadata.matchAll(/<version>([^<]+)<\/version>/g))
+    .map((m) => m[1])
+    .filter((v) => v.startsWith(prefix))
+    .map((v) => v.slice(prefix.length));
+}
+
+/**
+ * promotions_slim.json only gives the bare build number (e.g. "10.13.4.1614"),
+ * but legacy MC versions (1.7.10 and earlier) publish it under a branch-suffixed
+ * maven id (e.g. "10.13.4.1614-1.7.10") — resolve against the real build list so
+ * we never hand the installer an id that doesn't actually exist. Also self-heals
+ * instances whose `loaderVersion` was saved back when this used the bare id.
+ */
+async function resolveForgeBuild(mcVersion: string, build: string): Promise<string> {
+  const builds = await forgeBuildList(mcVersion);
+  if (builds.includes(build)) return build;
+  return builds.find((b) => b.startsWith(`${build}-`)) ?? build;
+}
+
 /**
  * Every Forge build ever published, not just the "recommended"/"latest" ones
  * promoted on the website — lets users pick unstable/beta builds too.
  */
 export async function forgeVersionsFor(mcVersion: string): Promise<LoaderVersionInfo> {
-  const [promotions, metadata] = await Promise.all([
+  const [promotions, allBuilds] = await Promise.all([
     getJson<ForgePromotions>(FORGE_PROMOTIONS),
-    getText(FORGE_METADATA)
+    forgeBuildList(mcVersion)
   ]);
-  const recommended = promotions.promos[`${mcVersion}-recommended`];
-  const latest = promotions.promos[`${mcVersion}-latest`];
 
-  const prefix = `${mcVersion}-`;
-  const allBuilds = Array.from(metadata.matchAll(/<version>([^<]+)<\/version>/g))
-    .map((m) => m[1])
-    .filter((v) => v.startsWith(prefix))
-    .map((v) => v.slice(prefix.length))
-    .sort(compareForgeBuild)
-    .reverse();
+  const resolveBuild = (promoBuild?: string): string | undefined => {
+    if (!promoBuild) return undefined;
+    if (allBuilds.includes(promoBuild)) return promoBuild;
+    return allBuilds.find((b) => b.startsWith(`${promoBuild}-`)) ?? promoBuild;
+  };
+  const recommended = resolveBuild(promotions.promos[`${mcVersion}-recommended`]);
+  const latest = resolveBuild(promotions.promos[`${mcVersion}-latest`]);
 
+  const sorted = allBuilds.slice().sort(compareForgeBuild).reverse();
   const promoted = new Set([recommended, latest].filter(Boolean) as string[]);
   const stable = [recommended, latest].filter(Boolean) as string[];
-  const unstable = allBuilds.filter((v) => !promoted.has(v));
+  const unstable = sorted.filter((v) => !promoted.has(v));
 
   return { recommended, latest, stable, unstable };
 }
@@ -64,7 +86,8 @@ export async function installForge(mcVersion: string, forgeVersion: string): Pro
   const existing = findInstalledForge(mcVersion, forgeVersion);
   if (existing) return existing;
 
-  const fullVersion = `${mcVersion}-${forgeVersion}`;
+  const resolvedBuild = await resolveForgeBuild(mcVersion, forgeVersion);
+  const fullVersion = `${mcVersion}-${resolvedBuild}`;
   const installerPath = path.join(paths.cache, `forge-${fullVersion}-installer.jar`);
   await downloadFile(FORGE_INSTALLER(fullVersion), installerPath);
 
@@ -113,7 +136,8 @@ export async function installForgeServer(
   javaExe: string,
   log: (line: string) => void
 ): Promise<void> {
-  const fullVersion = `${mcVersion}-${forgeVersion}`;
+  const resolvedBuild = await resolveForgeBuild(mcVersion, forgeVersion);
+  const fullVersion = `${mcVersion}-${resolvedBuild}`;
   const installerPath = path.join(paths.cache, `forge-${fullVersion}-installer.jar`);
   await downloadFile(FORGE_INSTALLER(fullVersion), installerPath);
   await runServerInstaller(javaExe, installerPath, serverDir, log);
