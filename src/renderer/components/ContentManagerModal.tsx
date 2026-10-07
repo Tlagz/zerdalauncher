@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { SourceSwitch } from './SourceSwitch';
 import { VersionPickerModal } from './VersionPickerModal';
 import { useBackdropClose } from '../hooks/useBackdropClose';
-import { confirmDialog } from '../ui/feedback';
+import { confirmDialog, showToast } from '../ui/feedback';
 import type {
   Instance,
   ModProvider,
@@ -49,6 +49,12 @@ function formatDownloads(n: number): string {
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
   return String(n);
 }
+/** Public project page; both URL forms redirect to the canonical slug page. */
+function projectUrl(provider: ModProvider, projectId: string, slug?: string): string {
+  return provider === 'modrinth'
+    ? `https://modrinth.com/project/${slug || projectId}`
+    : `https://www.curseforge.com/projects/${projectId}`;
+}
 function formatSize(bytes: number): string {
   if (!bytes) return '';
   const mb = bytes / (1024 * 1024);
@@ -79,6 +85,13 @@ export function ContentManagerModal({
   const [updates, setUpdates] = useState<ContentUpdate[]>([]);
   const [checking, setChecking] = useState(false);
   const [busyFile, setBusyFile] = useState<string | null>(null);
+  const [installedQuery, setInstalledQuery] = useState('');
+
+  const visibleInstalled = useMemo(() => {
+    const q = installedQuery.trim().toLowerCase();
+    if (!q) return installed;
+    return installed.filter((m) => `${m.title ?? ''} ${m.fileName}`.toLowerCase().includes(q));
+  }, [installed, installedQuery]);
 
   const installedProjectIds = useMemo(
     () => new Set(installed.map((m) => m.projectId).filter(Boolean) as string[]),
@@ -180,6 +193,19 @@ export function ContentManagerModal({
     }
   };
 
+  const addFromPc = async () => {
+    setError(null);
+    try {
+      const list = await window.api.mods.pickLocal(instance.id, kind);
+      if (!list) return;
+      setInstalled(list);
+      setTab('installed');
+      showToast('Dodano pliki z komputera.', 'success');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const handleToggle = async (mod: InstalledMod) => {
     setInstalled(await window.api.mods.toggle(instance.id, kind, mod.fileName, !mod.enabled));
   };
@@ -250,6 +276,9 @@ export function ContentManagerModal({
           >
             Zainstalowane ({installed.length})
           </button>
+          <button className="ghost" onClick={addFromPc} title="Dodaj pliki z dysku do tej instancji">
+            📂 Dodaj z komputera
+          </button>
           {tab === 'browse' && (
             <div className="mod-source-right">
               <SourceSwitch value={provider} onChange={setProvider} />
@@ -310,6 +339,13 @@ export function ContentManagerModal({
                           </div>
                         )}
                       </div>
+                      <button
+                        className="ghost"
+                        title="Otwórz stronę w przeglądarce"
+                        onClick={() => window.open(projectUrl(r.provider, r.projectId, r.slug), '_blank')}
+                      >
+                        🔗 Strona
+                      </button>
                       <button className="primary" disabled={already} onClick={() => setPickerFor(r)}>
                         {already ? 'Zainstalowany' : 'Instaluj…'}
                       </button>
@@ -360,6 +396,12 @@ export function ContentManagerModal({
         ) : (
           <div className="installed-wrap">
             <div className="installed-toolbar">
+              <input
+                className="instances-search"
+                placeholder="🔎 Szukaj w zainstalowanych…"
+                value={installedQuery}
+                onChange={(e) => setInstalledQuery(e.target.value)}
+              />
               <button className="ghost" onClick={checkForUpdates} disabled={checking || installed.length === 0}>
                 {checking ? 'Sprawdzam…' : '🔄 Sprawdź aktualizacje'}
               </button>
@@ -371,7 +413,10 @@ export function ContentManagerModal({
             </div>
             <div className="mod-list">
               {installed.length === 0 && <div className="mod-empty">Nic nie zainstalowano.</div>}
-              {installed.map((m) => {
+              {installed.length > 0 && visibleInstalled.length === 0 && (
+                <div className="mod-empty">Brak wyników dla „{installedQuery}".</div>
+              )}
+              {visibleInstalled.map((m) => {
                 const upd = updateByFile.get(m.fileName);
                 return (
                   <div className={`mod-row ${m.enabled ? '' : 'is-disabled'}`} key={m.fileName}>
@@ -395,6 +440,15 @@ export function ContentManagerModal({
                     {upd && (
                       <button className="primary" disabled={!!busyFile} onClick={() => applyUpdate(upd)}>
                         {busyFile === m.fileName ? 'Aktualizuję…' : 'Aktualizuj'}
+                      </button>
+                    )}
+                    {m.provider && m.projectId && (
+                      <button
+                        className="ghost"
+                        title="Otwórz stronę w przeglądarce"
+                        onClick={() => window.open(projectUrl(m.provider!, m.projectId!), '_blank')}
+                      >
+                        🔗
                       </button>
                     )}
                     <button onClick={() => handleToggle(m)} title={m.enabled ? 'Wyłącz' : 'Włącz'}>

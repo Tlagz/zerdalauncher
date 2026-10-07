@@ -78,7 +78,7 @@ import {
 } from './server';
 import { initTunnel, startTunnel, stopTunnel } from './server/tunnel';
 import { serverDir } from './utils/paths';
-import type { AppSettings, Instance, ModLoader } from '../shared/types';
+import type { AppSettings, ContentKind, Instance, ModLoader } from '../shared/types';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -222,6 +222,19 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.modsAddLocal, (_e, instanceId: string, kind, filePaths: string[]) =>
     addLocalContent(instanceId, kind, filePaths)
   );
+  ipcMain.handle(IPC.modsPickLocal, async (_e, instanceId: string, kind: ContentKind) => {
+    const win = getMainWindow() ?? undefined;
+    const res = await dialog.showOpenDialog(win!, {
+      title: kind === 'mod' ? 'Wybierz mody z komputera (.jar)' : 'Wybierz pliki z komputera (.zip)',
+      properties: ['openFile', 'multiSelections'],
+      filters:
+        kind === 'mod'
+          ? [{ name: 'Mody (.jar)', extensions: ['jar'] }]
+          : [{ name: 'Paczki (.zip)', extensions: ['zip'] }]
+    });
+    if (res.canceled || res.filePaths.length === 0) return null;
+    return addLocalContent(instanceId, kind, res.filePaths);
+  });
   ipcMain.handle(IPC.modsCheckUpdates, (_e, instanceId: string, kind) =>
     checkUpdates(instanceId, kind)
   );

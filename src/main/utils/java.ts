@@ -100,7 +100,10 @@ export function listSystemJavas(): Array<{ exe: string; major: number }> {
 /** Find a system Java whose major version is >= required. Returns null if none. */
 export function findSystemJava(requiredMajor: number): string | null {
   const all = listSystemJavas();
-  // Prefer the closest match >= required, else null.
-  const ok = all.filter((j) => j.major >= requiredMajor).sort((a, b) => a.major - b.major);
+  // Prefer the closest match >= required, else null. Java 8-era games (≤ 1.16,
+  // LaunchWrapper) crash on newer JVMs, so for those only an exact Java 8 will do.
+  const ok = all
+    .filter((j) => (requiredMajor <= 8 ? j.major === 8 : j.major >= requiredMajor))
+    .sort((a, b) => a.major - b.major);
   return ok[0]?.exe ?? null;
 }

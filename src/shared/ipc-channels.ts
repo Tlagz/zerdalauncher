@@ -54,6 +54,7 @@ export const IPC = {
   modsToggle: 'mods:toggle',
   modsDelete: 'mods:delete',
   modsAddLocal: 'mods:addLocal',
+  modsPickLocal: 'mods:pickLocal',
   modsCheckUpdates: 'mods:checkUpdates',
   modsUpdate: 'mods:update',
   modsFetchIcons: 'mods:fetchIcons',

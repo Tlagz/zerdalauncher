@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import AdmZip from 'adm-zip';
+import { libraryArtifactPath } from '../minecraft/manifest';
 import { getJson, getText, downloadFile } from '../utils/http';
 import { paths } from '../utils/paths';
 import { detectJava } from '../utils/java';
@@ -92,7 +94,6 @@ export async function installForge(mcVersion: string, forgeVersion: string): Pro
   await downloadFile(FORGE_INSTALLER(fullVersion), installerPath);
 
   const java = detectJava();
-  if (!java) throw new Error('Forge installer wymaga zainstalowanej Javy.');
 
   // We need a .minecraft-like directory with launcher_profiles.json for the installer
   const fakeRoot = path.join(paths.cache, 'forge-install-root');
@@ -102,10 +103,15 @@ export async function installForge(mcVersion: string, forgeVersion: string): Pro
     fs.writeFileSync(profiles, JSON.stringify({ profiles: {}, selectedProfile: '', clientToken: '' }));
   }
 
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(java, ['-jar', installerPath, '--installClient', fakeRoot], { stdio: 'inherit' });
-    child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('Forge installer exit ' + code))));
-  });
+  const run = java ? await runForgeInstaller(java, installerPath, fakeRoot) : null;
+  if (!run || run.code !== 0) {
+    // Old installers (e.g. 1.7.10) have no headless client mode ("--installClient is
+    // not a recognized option"), so do by hand what they would have done.
+    const legacyId = installForgeLegacy(installerPath);
+    if (legacyId) return legacyId;
+    if (!run) throw new Error('Forge installer wymaga zainstalowanej Javy.');
+    throw new Error(`Forge installer zakończył się kodem ${run.code}.\n${run.tail}`);
+  }
 
   // Copy generated version + libraries into our data root
   const fakeVersions = path.join(fakeRoot, 'versions');
@@ -143,6 +149,66 @@ export async function installForgeServer(
   await runServerInstaller(javaExe, installerPath, serverDir, log);
 }
 
+/** Run the installer headless, capturing output so failures are explainable. */
+function runForgeInstaller(
+  java: string,
+  installerPath: string,
+  fakeRoot: string
+): Promise<{ code: number | null; tail: string }> {
+  return new Promise((resolve) => {
+    // cwd = fakeRoot so the installer's "<name>.log" doesn't litter the app dir.
+    const child = spawn(java, ['-jar', installerPath, '--installClient', fakeRoot], {
+      cwd: fakeRoot,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    let out = '';
+    const collect = (b: Buffer): void => {
+      process.stdout.write(b);
+      out = (out + b.toString()).slice(-1500);
+    };
+    child.stdout?.on('data', collect);
+    child.stderr?.on('data', collect);
+    child.on('error', (err) => resolve({ code: -1, tail: String(err) }));
+    child.on('exit', (code) => resolve({ code, tail: out.trim() }));
+  });
+}
+
+/**
+ * Installs an old-style (≤ 1.12) Forge from its installer jar without running it:
+ * the jar bundles the version json (`versionInfo`) and the universal jar, which is
+ * all the installer ever placed on disk — libraries are fetched at launch.
+ */
+function installForgeLegacy(installerPath: string): string | null {
+  try {
+    const zip = new AdmZip(installerPath);
+    const entry = zip.getEntry('install_profile.json');
+    if (!entry) return null;
+    const profile = JSON.parse(entry.getData().toString('utf8')) as {
+      install?: { path?: string; filePath?: string; minecraft?: string };
+      versionInfo?: { id?: string; inheritsFrom?: string };
+    };
+    const info = profile.versionInfo;
+    const { path: coord, filePath, minecraft } = profile.install ?? {};
+    if (!info?.id || !coord || !filePath) return null;
+    const universal = zip.getEntry(filePath);
+    if (!universal) return null;
+
+    const jarDest = path.join(paths.libraries, libraryArtifactPath(coord));
+    fs.mkdirSync(path.dirname(jarDest), { recursive: true });
+    fs.writeFileSync(jarDest, universal.getData());
+
+    const versionDir = path.join(paths.versions, info.id);
+    fs.mkdirSync(versionDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(versionDir, `${info.id}.json`),
+      JSON.stringify({ ...info, inheritsFrom: info.inheritsFrom ?? minecraft }, null, 2)
+    );
+    return info.id;
+  } catch {
+    return null;
+  }
+}
+
 /** Find an already-installed Forge profile id for this MC/Forge pair, if any. */
 function findInstalledForge(mcVersion: string, forgeVersion: string): string | null {
   if (!fs.existsSync(paths.versions)) return null;
@@ -150,7 +216,7 @@ function findInstalledForge(mcVersion: string, forgeVersion: string): string | n
     .readdirSync(paths.versions)
     .find(
       (n) =>
-        n.includes('forge') &&
+        n.toLowerCase().includes('forge') &&
         n.includes(mcVersion) &&
         n.includes(forgeVersion) &&
         fs.existsSync(path.join(paths.versions, n, `${n}.json`))

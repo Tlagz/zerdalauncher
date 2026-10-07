@@ -184,6 +184,8 @@ const api = {
       ipcRenderer.invoke(IPC.modsDelete, instanceId, kind, fileName),
     addLocal: (instanceId: string, kind: ContentKind, filePaths: string[]): Promise<InstalledMod[]> =>
       ipcRenderer.invoke(IPC.modsAddLocal, instanceId, kind, filePaths),
+    pickLocal: (instanceId: string, kind: ContentKind): Promise<InstalledMod[] | null> =>
+      ipcRenderer.invoke(IPC.modsPickLocal, instanceId, kind),
     checkUpdates: (instanceId: string, kind: ContentKind): Promise<ContentUpdate[]> =>
       ipcRenderer.invoke(IPC.modsCheckUpdates, instanceId, kind),
     update: (
