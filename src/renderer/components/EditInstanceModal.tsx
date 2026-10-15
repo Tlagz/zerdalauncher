@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ImageUp } from 'lucide-react';
 import { useStore } from '../store';
+import { LoaderIcon } from './InstanceIcon';
+import { ModalHeader } from '../ui/ModalHeader';
 import type { Instance } from '../../shared/types';
 
 const PRESET_ICONS = ['🧱', '🧵', '⚙️', '🔥', '🗺️', '⚔️', '🏰', '🚀', '🐉', '🌌', '🧙', '🧪', '💎', '🪓', '🌲', '👾'];
@@ -26,8 +29,6 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
     window.api.system.detectJava().then(setDetectedJava);
   }, []);
 
-  const loaderDefault =
-    instance.loader === 'fabric' ? '🧵' : instance.loader === 'forge' ? '⚙️' : instance.loader === 'neoforge' ? '🔥' : '🧱';
 
   const pickImage = async () => {
     setError(null);
@@ -65,17 +66,12 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal mod-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Ustawienia instancji</h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
-              {instance.mcVersion} · {instance.loader}
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose} disabled={busy}>
-            ✕
-          </button>
-        </div>
+        <ModalHeader
+          title="Ustawienia instancji"
+          subtitle={`${instance.mcVersion} · ${instance.loader}`}
+          onClose={onClose}
+          closeDisabled={busy}
+        />
 
         {error && <div className="error">{error}</div>}
 
@@ -89,7 +85,7 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
             <label>Ikona (profilowe paczki)</label>
             <div className="icon-edit">
               <div className={`icon-preview ${instance.loader}`}>
-                {icon ? previewIsImg ? <img src={icon} alt="" /> : <span>{icon}</span> : loaderDefault}
+                {icon ? previewIsImg ? <img src={icon} alt="" /> : <span>{icon}</span> : <LoaderIcon loader={instance.loader} />}
               </div>
               <div className="icon-controls">
                 <div className="icon-presets">
@@ -113,7 +109,7 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
                     maxLength={4}
                   />
                   <button type="button" onClick={pickImage}>
-                    🖼 Wybierz obraz…
+                    <ImageUp size={15} /> Wybierz obraz…
                   </button>
                   <button type="button" className="ghost" onClick={() => setIcon('')}>
                     Domyślna
@@ -153,7 +149,7 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
               placeholder="np. -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -Dfile.encoding=UTF-8"
               spellCheck={false}
             />
-            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6 }}>
+            <div className="field-hint">
               Dopisywane do komendy uruchomienia (oprócz <code>-Xmx{ramMb}M</code>). Rozdzielaj spacjami.
             </div>
           </div>
@@ -165,7 +161,7 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
               onChange={(e) => setServerAddress(e.target.value)}
               placeholder="np. mc.hypixel.net albo 51.83.12.4:25565"
             />
-            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6 }}>
+            <div className="field-hint">
               Po uruchomieniu launcher od razu wbije Cię na ten serwer (Minecraft 1.20+).
             </div>
           </div>

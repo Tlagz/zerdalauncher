@@ -1,21 +1,26 @@
 import { useState } from 'react';
+import { Play, Star, ChevronRight, Clock, Gamepad2, Globe, Download, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
 import { alertDialog, showToast } from '../ui/feedback';
+import { formatPlaytime } from '../format';
 import type { Instance } from '../../shared/types';
 
-function fmtPlaytime(ms?: number): string {
-  if (!ms || ms < 60000) return '';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
-export function InstanceCard({ instance, onOpen }: { instance: Instance; onOpen: () => void }) {
+export function InstanceCard({
+  instance,
+  onOpen,
+  morph = false
+}: {
+  instance: Instance;
+  onOpen: () => void;
+  /** Carries the shared-element names for the card ↔ detail transition. */
+  morph?: boolean;
+}) {
   const { refreshInstances } = useStore();
   const { isLaunching, launch } = useLaunch(instance);
   const [dragOver, setDragOver] = useState(false);
+  const playtime = formatPlaytime(instance.playtimeMs);
 
   const togglePin = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,27 +74,43 @@ export function InstanceCard({ instance, onOpen }: { instance: Instance; onOpen:
       }}
       onDrop={handleDrop}
     >
-      {dragOver && <div className="card-drop">⬇ Upuść .jar / .zip, aby dodać</div>}
+      {dragOver && (
+        <div className="card-drop">
+          <Download size={18} /> Upuść .jar / .zip, aby dodać
+        </div>
+      )}
       <button
         className={`card-pin ${instance.pinned ? 'pinned' : ''}`}
         title={instance.pinned ? 'Odepnij' : 'Przypnij na górę'}
         onClick={togglePin}
       >
-        {instance.pinned ? '★' : '☆'}
+        <Star size={16} fill={instance.pinned ? 'currentColor' : 'none'} />
       </button>
-      <span className="card-chevron">›</span>
-      <InstanceIcon instance={instance} />
+      <ChevronRight size={20} className="card-chevron" />
+      <InstanceIcon instance={instance} morph={morph} />
       <div className="instance-name">{instance.name}</div>
       <div className="instance-meta">
         <span className="tag">{instance.mcVersion}</span>
         <span className={`tag ${instance.loader}`}>{instance.loader}</span>
         <span className="tag">{instance.ramMb} MB</span>
       </div>
-      {(fmtPlaytime(instance.playtimeMs) || instance.serverAddress) && (
+      {(playtime || instance.sessions || instance.serverAddress) && (
         <div className="instance-stats">
-          {fmtPlaytime(instance.playtimeMs) && <span>⏱ {fmtPlaytime(instance.playtimeMs)}</span>}
-          {instance.sessions ? <span>🎮 {instance.sessions}×</span> : null}
-          {instance.serverAddress && <span>🌐</span>}
+          {playtime && (
+            <span title="Czas gry">
+              <Clock size={13} /> {playtime}
+            </span>
+          )}
+          {instance.sessions ? (
+            <span title="Liczba uruchomień">
+              <Gamepad2 size={13} /> {instance.sessions}×
+            </span>
+          ) : null}
+          {instance.serverAddress && (
+            <span title={`Auto-dołączanie: ${instance.serverAddress}`}>
+              <Globe size={13} />
+            </span>
+          )}
         </div>
       )}
       <div className="card-actions">
@@ -101,7 +122,15 @@ export function InstanceCard({ instance, onOpen }: { instance: Instance; onOpen:
           }}
           disabled={isLaunching}
         >
-          {isLaunching ? 'Uruchamianie…' : '▶ Graj'}
+          {isLaunching ? (
+            <>
+              <Loader2 size={16} className="spin" /> Uruchamianie…
+            </>
+          ) : (
+            <>
+              <Play size={16} fill="currentColor" /> Graj
+            </>
+          )}
         </button>
       </div>
     </div>

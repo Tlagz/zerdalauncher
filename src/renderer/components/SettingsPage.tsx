@@ -1,4 +1,16 @@
 import { useEffect, useState } from 'react';
+import {
+  Save,
+  Check,
+  Palette,
+  Coffee,
+  MemoryStick,
+  ToggleRight,
+  RefreshCw,
+  Download,
+  Trash2,
+  Loader2
+} from 'lucide-react';
 import { useStore } from '../store';
 import { alertDialog } from '../ui/feedback';
 import type { AppSettings, JreStatus } from '../../shared/types';
@@ -14,7 +26,7 @@ function updateLabel(s: ReturnType<typeof useStore.getState>['updateStatus']): s
     case 'ready':
       return `Wersja ${s.version} gotowa do instalacji.`;
     case 'none':
-      return 'Masz najnowszą wersję. ✓';
+      return 'Masz najnowszą wersję.';
     case 'disabled':
       return 'Auto-aktualizacje działają tylko w zainstalowanej wersji (nie w trybie dev).';
     case 'error':
@@ -87,12 +99,15 @@ export function SettingsPage() {
           <div className="page-subtitle">Domyślne wartości dla nowych instancji</div>
         </div>
         <button className="primary" onClick={save} disabled={busy}>
-          {saved ? 'Zapisano ✓' : 'Zapisz'}
+          {saved ? <Check size={16} /> : <Save size={16} />}
+          {saved ? 'Zapisano' : 'Zapisz'}
         </button>
       </div>
 
       <div className="section">
-        <h3>Motyw</h3>
+        <h3>
+          <Palette size={16} /> Motyw
+        </h3>
         <div className="theme-grid">
           {[
             { id: 'default', label: 'Domyślny', desc: 'Fiolet + cyan' },
@@ -118,7 +133,9 @@ export function SettingsPage() {
       </div>
 
       <div className="section">
-        <h3>Java</h3>
+        <h3>
+          <Coffee size={16} /> Java
+        </h3>
         <div className="field-grid single">
           <div>
             <label>Ścieżka do Javy (pozostaw puste, aby wykryć)</label>
@@ -128,24 +145,31 @@ export function SettingsPage() {
               placeholder={detectedJava ?? 'np. C:\\Program Files\\Java\\jdk-17\\bin\\javaw.exe'}
             />
             {detectedJava && (
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
+              <div className="field-hint">
                 Wykryto: <code>{detectedJava}</code>
               </div>
             )}
           </div>
         </div>
 
-        <div style={{ marginTop: 20 }}>
+        <div className="settings-subblock">
           <label>Środowiska Java do pobrania (launcher i tak pobierze automatycznie przy starcie gry)</label>
-          <div className="mod-list" style={{ marginTop: 8 }}>
+          <div className="mod-list settings-list">
             {runtimes.map((r) => (
               <div className="mod-row" key={r.component}>
-                <div className="mod-icon placeholder">☕</div>
+                <div className="mod-icon placeholder">
+                  <Coffee size={22} />
+                </div>
                 <div className="mod-info">
                   <div className="mod-title">Java {r.javaMajor}</div>
                   <div className="mod-sub">
                     {r.mcRange}
-                    {r.installed ? ' · zainstalowana ✓' : ''}
+                    {r.installed && (
+                      <span className="ok-text">
+                        {' · '}
+                        <Check size={12} /> zainstalowana
+                      </span>
+                    )}
                     {runtimeBusy === r.component && runtimeProgress
                       ? ` · pobieram ${runtimeProgress.current}/${runtimeProgress.total}`
                       : ''}
@@ -153,11 +177,12 @@ export function SettingsPage() {
                 </div>
                 {r.installed ? (
                   <button className="danger" disabled={runtimeBusy === r.component} onClick={() => deleteRuntime(r.component)}>
-                    🗑 Usuń
+                    <Trash2 size={15} /> Usuń
                   </button>
                 ) : (
                   <button className="primary" disabled={runtimeBusy === r.component} onClick={() => downloadRuntime(r.component)}>
-                    {runtimeBusy === r.component ? 'Pobieram…' : '⬇ Pobierz'}
+                    {runtimeBusy === r.component ? <Loader2 size={15} className="spin" /> : <Download size={15} />}
+                    {runtimeBusy === r.component ? 'Pobieram…' : 'Pobierz'}
                   </button>
                 )}
               </div>
@@ -167,7 +192,9 @@ export function SettingsPage() {
       </div>
 
       <div className="section">
-        <h3>Pamięć i wydajność</h3>
+        <h3>
+          <MemoryStick size={16} /> Pamięć i wydajność
+        </h3>
         <div className="field-grid single">
           <div>
             <label>Domyślny RAM (MB): {local.defaultRamMb}</label>
@@ -184,34 +211,38 @@ export function SettingsPage() {
       </div>
 
       <div className="section">
-        <h3>Zachowanie</h3>
-        <label style={{ display: 'flex', gap: 10, alignItems: 'center', textTransform: 'none' }}>
+        <h3>
+          <ToggleRight size={16} /> Zachowanie
+        </h3>
+        <label className="check-row">
           <input
             type="checkbox"
             checked={local.closeOnLaunch}
             onChange={(e) => setLocal({ ...local, closeOnLaunch: e.target.checked })}
-            style={{ width: 'auto' }}
           />
           Zamknij launcher po uruchomieniu gry
         </label>
       </div>
 
       <div className="section">
-        <h3>Aktualizacje</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <h3>
+          <RefreshCw size={16} /> Aktualizacje
+        </h3>
+        <div className="update-row">
           <div>
-            <div style={{ fontWeight: 600 }}>ZerdaLauncher {version && `v${version}`}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+            <div className="update-title">ZerdaLauncher {version && `v${version}`}</div>
+            <div className="update-sub">
               {updateLabel(updateStatus) || 'Aktualizacje pobierają się automatycznie z GitHub.'}
             </div>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <div className="update-actions">
             {updateStatus?.state === 'ready' ? (
               <button className="primary" onClick={() => window.api.updates.install()}>
-                Uruchom ponownie i zainstaluj
+                <Download size={16} /> Uruchom ponownie i zainstaluj
               </button>
             ) : (
               <button onClick={() => window.api.updates.check()} disabled={checking}>
+                <RefreshCw size={15} className={checking ? 'spin' : ''} />
                 {checking ? 'Sprawdzam…' : 'Sprawdź aktualizacje'}
               </button>
             )}

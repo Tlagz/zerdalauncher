@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { Play, Square, Loader2, Terminal, SlidersHorizontal, FolderOpen, Trash2, Download, Plus } from 'lucide-react';
 import { useStore } from '../store';
+import { LoaderIcon } from './InstanceIcon';
+import { plural } from '../format';
 import { CreateServerModal } from './CreateServerModal';
 import { ServerConsoleModal } from './ServerConsoleModal';
 import { ServerPropsModal } from './ServerPropsModal';
@@ -21,14 +24,6 @@ function ServerCard({
   const state = status?.state ?? 'stopped';
   const running = state === 'running' || state === 'starting';
 
-  const loaderIcon =
-    server.loader === 'fabric'
-      ? '🧵'
-      : server.loader === 'forge'
-      ? '🔥'
-      : server.loader === 'neoforge'
-      ? '⚒️'
-      : '🧱';
   const supportsMods = server.loader !== 'vanilla';
 
   const toggle = () => {
@@ -78,8 +73,14 @@ function ServerCard({
       }}
       onDrop={handleDrop}
     >
-      {dragOver && <div className="card-drop">⬇ Upuść .jar (mody serwera)</div>}
-      <div className={`instance-icon ${server.loader}`}>{loaderIcon}</div>
+      {dragOver && (
+        <div className="card-drop">
+          <Download size={18} /> Upuść .jar (mody serwera)
+        </div>
+      )}
+      <div className={`instance-icon ${server.loader}`}>
+        <LoaderIcon loader={server.loader} />
+      </div>
       <div className="instance-name">
         <span className={`console-dot ${running ? 'on' : 'off'}`} /> {server.name}
       </div>
@@ -91,20 +92,32 @@ function ServerCard({
       </div>
       <div className="card-actions">
         <button className={running ? 'danger' : 'primary'} onClick={toggle}>
-          {state === 'starting' ? 'Startuje…' : running ? '■ Zatrzymaj' : '▶ Uruchom'}
+          {state === 'starting' ? (
+            <>
+              <Loader2 size={16} className="spin" /> Startuje…
+            </>
+          ) : running ? (
+            <>
+              <Square size={14} fill="currentColor" /> Zatrzymaj
+            </>
+          ) : (
+            <>
+              <Play size={16} fill="currentColor" /> Uruchom
+            </>
+          )}
         </button>
         <div className="card-icons">
           <button onClick={onConsole} title="Konsola">
-            🖥
+            <Terminal size={16} />
           </button>
           <button onClick={onProps} title="Ustawienia (server.properties)">
-            ⚙
+            <SlidersHorizontal size={16} />
           </button>
           <button onClick={() => window.api.servers.openFolder(server.id)} title="Otwórz folder">
-            📁
+            <FolderOpen size={16} />
           </button>
           <button className="danger" onClick={handleDelete} title="Usuń serwer">
-            🗑
+            <Trash2 size={16} />
           </button>
         </div>
       </div>
@@ -126,12 +139,12 @@ export function ServersPage() {
           <div className="page-subtitle">
             {servers.length === 0
               ? 'Postaw własny serwer Minecraft (Vanilla, Fabric, Forge lub NeoForge) w kilka chwil.'
-              : `${servers.length} ${servers.length === 1 ? 'serwer' : 'serwery'}`}
+              : `${servers.length} ${plural(servers.length, 'serwer', 'serwery', 'serwerów')}`}
           </div>
         </div>
         <div className="header-actions">
           <button className="primary" onClick={() => setShowCreate(true)}>
-            + Nowy serwer
+            <Plus size={16} /> Nowy serwer
           </button>
         </div>
       </div>
@@ -144,9 +157,9 @@ export function ServersPage() {
             zarządzać nim z konsoli. Na Fabricu / Forge / NeoForge dorzucisz mody (przeciągnij .jar na
             kartę).
           </p>
-          <div className="login-actions" style={{ marginTop: 16, justifyContent: 'center' }}>
+          <div className="empty-actions">
             <button className="primary" onClick={() => setShowCreate(true)}>
-              Stwórz serwer
+              <Plus size={16} /> Stwórz serwer
             </button>
           </div>
         </div>

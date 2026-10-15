@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
+import { LoaderIcon } from './InstanceIcon';
 import type { LoaderVersionInfo, ModLoader } from '../../shared/types';
 
 interface Props {
@@ -102,12 +103,11 @@ export function CreateInstanceModal({ onClose }: Props) {
               </option>
             ))}
           </select>
-          <label style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', textTransform: 'none' }}>
+          <label className="check-row field-check">
             <input
               type="checkbox"
               checked={showSnapshots}
               onChange={(e) => setShowSnapshots(e.target.checked)}
-              style={{ width: 'auto' }}
             />
             Pokaż snapshoty
           </label>
@@ -117,18 +117,20 @@ export function CreateInstanceModal({ onClose }: Props) {
           <label>Mod loader</label>
           <div className="loader-select">
             {([
-              { id: 'vanilla', label: 'Vanilla', icon: '🧱' },
-              { id: 'fabric', label: 'Fabric', icon: '🧵' },
-              { id: 'forge', label: 'Forge', icon: '⚙️' },
-              { id: 'neoforge', label: 'NeoForge', icon: '🔥' }
-            ] as Array<{ id: ModLoader; label: string; icon: string }>).map((l) => (
+              { id: 'vanilla', label: 'Vanilla' },
+              { id: 'fabric', label: 'Fabric' },
+              { id: 'forge', label: 'Forge' },
+              { id: 'neoforge', label: 'NeoForge' }
+            ] as Array<{ id: ModLoader; label: string }>).map((l) => (
               <button
                 type="button"
                 key={l.id}
                 className={`loader-chip ${l.id} ${loader === l.id ? 'active' : ''}`}
                 onClick={() => setLoader(l.id)}
               >
-                <span className="loader-chip-icon">{l.icon}</span>
+                <span className="loader-chip-icon">
+                  <LoaderIcon loader={l.id} />
+                </span>
                 {l.label}
               </button>
             ))}
@@ -158,7 +160,7 @@ export function CreateInstanceModal({ onClose }: Props) {
                 ))}
             </select>
             {loaderInfo.unstable.length > 0 && (
-              <label style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', textTransform: 'none' }}>
+              <label className="check-row field-check">
                 <input
                   type="checkbox"
                   checked={showUnstableLoader}
@@ -168,7 +170,6 @@ export function CreateInstanceModal({ onClose }: Props) {
                       setLoaderVersion(loaderInfo.recommended ?? loaderInfo.latest ?? loaderInfo.stable[0] ?? '');
                     }
                   }}
-                  style={{ width: 'auto' }}
                 />
                 Pokaż niestabilne wersje ({loaderInfo.unstable.length})
               </label>

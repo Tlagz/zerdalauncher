@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Check } from 'lucide-react';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import { ModalHeader } from '../ui/ModalHeader';
 import type { ServerInstance } from '../../shared/types';
 
 const FIELDS: Array<{ key: string; label: string; type?: 'text' | 'number' | 'bool' | 'select'; options?: string[] }> = [
@@ -40,17 +42,11 @@ export function ServerPropsModal({ server, onClose }: { server: ServerInstance; 
   return createPortal(
     <div className="modal-backdrop" {...backdrop}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Ustawienia serwera — {server.name}</h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
-              server.properties · zmiany działają po restarcie serwera
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        <ModalHeader
+          title={`Ustawienia serwera — ${server.name}`}
+          subtitle="server.properties · zmiany działają po restarcie serwera"
+          onClose={onClose}
+        />
 
         <div className="edit-scroll">
           {FIELDS.map((f) => (
@@ -85,7 +81,8 @@ export function ServerPropsModal({ server, onClose }: { server: ServerInstance; 
             Zamknij
           </button>
           <button className="primary" onClick={save} disabled={busy}>
-            {saved ? 'Zapisano ✓' : 'Zapisz'}
+            {saved && <Check size={16} />}
+            {saved ? 'Zapisano' : 'Zapisz'}
           </button>
         </div>
       </div>

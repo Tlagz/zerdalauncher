@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Play, Square, Copy, Check, Eraser, Globe, Share2, SendHorizontal } from 'lucide-react';
 import { useStore } from '../store';
+import { useBackdropClose } from '../hooks/useBackdropClose';
 import { alertDialog } from '../ui/feedback';
+import { ModalHeader } from '../ui/ModalHeader';
 import type { ServerInstance } from '../../shared/types';
 
 export function ServerConsoleModal({ server, onClose }: { server: ServerInstance; onClose: () => void }) {
@@ -44,46 +47,41 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
     setCmd('');
   };
 
+  const backdrop = useBackdropClose(onClose);
+  const stateLabel =
+    state === 'running' ? 'Działa' : state === 'starting' ? 'Startuje…' : state === 'error' ? 'Błąd' : 'Zatrzymany';
+
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" {...backdrop}>
       <div className="modal console-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Konsola serwera — {server.name}</h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
+        <ModalHeader
+          title={`Konsola serwera — ${server.name}`}
+          subtitle={
+            <>
               <span className={`console-dot ${running ? 'on' : 'off'}`} />
-              {state === 'running'
-                ? 'Działa'
-                : state === 'starting'
-                ? 'Startuje…'
-                : state === 'error'
-                ? 'Błąd'
-                : 'Zatrzymany'}{' '}
-              · {server.mcVersion} · {server.loader} · port {server.port}
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+              {stateLabel} · {server.mcVersion} · {server.loader} · port {server.port}
+            </>
+          }
+          onClose={onClose}
+        />
 
         <div className="console-toolbar">
           {running ? (
             <button className="danger" onClick={() => window.api.servers.stop(server.id)}>
-              ■ Zatrzymaj
+              <Square size={14} fill="currentColor" /> Zatrzymaj
             </button>
           ) : (
             <button className="primary" onClick={() => window.api.servers.start(server.id).catch((e) => alertDialog({ message: (e as Error).message, tone: 'error' }))}>
-              ▶ Uruchom
+              <Play size={16} fill="currentColor" /> Uruchom
             </button>
           )}
           <button className="ghost" onClick={() => navigator.clipboard.writeText(log).catch(() => {})} disabled={!log}>
-            📋 Kopiuj
+            <Copy size={15} /> Kopiuj
           </button>
           <button className="ghost" onClick={() => clearServerLog(server.id)} disabled={!log}>
-            🧹 Wyczyść
+            <Eraser size={15} /> Wyczyść
           </button>
-          <label className="console-autoscroll">
+          <label className="check-row console-autoscroll">
             <input type="checkbox" checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} />
             Auto-przewijanie
           </label>
@@ -91,7 +89,7 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
 
         <div className={`tunnel-bar ${tunnelOn ? 'on' : ''} ${tState === 'error' ? 'err' : ''}`}>
           <div className="tunnel-info">
-            <span className="tunnel-globe">🌐</span>
+            <Globe size={16} className="tunnel-globe" />
             {tunnelOn ? (
               <>
                 <span className="tunnel-label">Publiczny adres:</span>
@@ -110,7 +108,8 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
           <div className="tunnel-actions">
             {tunnelOn && (
               <button className="ghost" onClick={copyAddress}>
-                {copied ? '✓ Skopiowano' : '📋 Kopiuj adres'}
+                {copied ? <Check size={15} /> : <Copy size={15} />}
+                {copied ? 'Skopiowano' : 'Kopiuj adres'}
               </button>
             )}
             {tunnelOn || tunnelBusy ? (
@@ -122,7 +121,7 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
                 className="primary"
                 onClick={() => window.api.servers.startTunnel(server.id).catch((e) => alertDialog({ message: (e as Error).message, tone: 'error' }))}
               >
-                🌐 Udostępnij
+                <Share2 size={15} /> Udostępnij
               </button>
             )}
           </div>
@@ -143,7 +142,7 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
             }}
           />
           <button className="primary" onClick={send} disabled={!running || !cmd.trim()}>
-            Wyślij
+            <SendHorizontal size={15} /> Wyślij
           </button>
         </div>
       </div>

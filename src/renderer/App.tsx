@@ -76,7 +76,7 @@ export default function App() {
       <div className="app">
         <Sidebar />
         <div className="main">
-          <div key={page} className="page-fade">
+          <div key={page} className="page-body">
             {page === 'home' && <HomePage />}
             {page === 'instances' && <InstancesPage />}
             {page === 'servers' && <ServersPage />}

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import { LoaderIcon } from './InstanceIcon';
 import type { ServerLoader } from '../../shared/types';
 
 export function CreateServerModal({ onClose }: { onClose: () => void }) {
@@ -84,12 +86,11 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
-          <label style={{ marginTop: 6, display: 'flex', gap: 6, alignItems: 'center', textTransform: 'none' }}>
+          <label className="check-row field-check">
             <input
               type="checkbox"
               checked={showSnapshots}
               onChange={(e) => setShowSnapshots(e.target.checked)}
-              style={{ width: 'auto' }}
             />
             Pokaż snapshoty
           </label>
@@ -97,13 +98,13 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
 
         <div className="form-row">
           <label>Typ serwera</label>
-          <div className="loader-select" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          <div className="loader-select two-col">
             {(
               [
-                { id: 'vanilla', label: 'Vanilla', icon: '🧱' },
-                { id: 'fabric', label: 'Fabric (mody)', icon: '🧵' },
-                { id: 'forge', label: 'Forge (mody)', icon: '🔥' },
-                { id: 'neoforge', label: 'NeoForge (mody)', icon: '⚒️' }
+                { id: 'vanilla', label: 'Vanilla' },
+                { id: 'fabric', label: 'Fabric (mody)' },
+                { id: 'forge', label: 'Forge (mody)' },
+                { id: 'neoforge', label: 'NeoForge (mody)' }
               ] as const
             ).map((l) => (
               <button
@@ -112,13 +113,15 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
                 className={`loader-chip ${l.id} ${loader === l.id ? 'active' : ''}`}
                 onClick={() => setLoader(l.id)}
               >
-                <span className="loader-chip-icon">{l.icon}</span>
+                <span className="loader-chip-icon">
+                  <LoaderIcon loader={l.id} />
+                </span>
                 {l.label}
               </button>
             ))}
           </div>
           {(loader === 'forge' || loader === 'neoforge') && (
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 8 }}>
+            <div className="field-hint">
               {loader === 'forge' ? 'Forge' : 'NeoForge'} uruchamia instalator i pobiera biblioteki —
               pierwsze tworzenie może potrwać 1–2 minuty.
             </div>
@@ -147,14 +150,9 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textTransform: 'none', marginTop: 8 }}>
-          <input
-            type="checkbox"
-            checked={eula}
-            onChange={(e) => setEula(e.target.checked)}
-            style={{ width: 'auto', marginTop: 3 }}
-          />
-          <span style={{ fontSize: 13 }}>
+        <label className="check-row eula-row">
+          <input type="checkbox" checked={eula} onChange={(e) => setEula(e.target.checked)} />
+          <span>
             Akceptuję <b>EULA Minecrafta</b> (account.mojang.com/documents/minecraft_eula). Wymagane do
             uruchomienia serwera.
           </span>
@@ -165,6 +163,7 @@ export function CreateServerModal({ onClose }: { onClose: () => void }) {
             Anuluj
           </button>
           <button className="primary" onClick={create} disabled={busy || !mcVersion || !eula}>
+            {busy && <Loader2 size={16} className="spin" />}
             {busy ? 'Tworzę…' : 'Stwórz serwer'}
           </button>
         </div>

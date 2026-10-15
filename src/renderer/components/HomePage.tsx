@@ -1,25 +1,17 @@
 import { useEffect, useState } from 'react';
+import { Play, Loader2, Clock, CalendarDays, Earth, Globe, Palette, MousePointer2, ArrowRight } from 'lucide-react';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
 import { SkinView } from './SkinView';
 import { SkinLibraryModal } from './SkinLibraryModal';
 import { alertDialog } from '../ui/feedback';
+import { formatDate, formatPlaytime } from '../format';
+import { transition } from '../ui/viewTransition';
 import type { Instance, WorldInfo } from '../../shared/types';
 
 const RECENT_LIMIT = 2;
 const WORLDS_PER_CARD = 3;
-
-function fmtPlaytime(ms?: number): string {
-  if (!ms || ms < 60000) return '';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-function fmtDate(ms?: number): string {
-  if (!ms) return '';
-  return new Date(ms).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 function RecentInstanceRow({ instance }: { instance: Instance }) {
   const { isLaunching, launch } = useLaunch(instance);
@@ -37,36 +29,73 @@ function RecentInstanceRow({ instance }: { instance: Instance }) {
     }
   };
 
+  const playtime = formatPlaytime(instance.playtimeMs);
+  const lastPlayed = formatDate(instance.lastPlayed);
+
   return (
     <div className="home-recent-card">
       <div className="home-recent-head">
         <InstanceIcon instance={instance} />
-        <div className="instance-name">{instance.name}</div>
+        <div className="home-recent-title">
+          <div className="instance-name truncate">{instance.name}</div>
+          <div className="instance-meta">
+            <span className="tag">{instance.mcVersion}</span>
+            <span className={`tag ${instance.loader}`}>{instance.loader}</span>
+          </div>
+        </div>
       </div>
-      <div className="instance-meta">
-        <span className="tag">{instance.mcVersion}</span>
-        <span className={`tag ${instance.loader}`}>{instance.loader}</span>
-      </div>
-      <div className="mod-sub">
-        {fmtPlaytime(instance.playtimeMs) && `⏱ ${fmtPlaytime(instance.playtimeMs)}`}
-        {fmtDate(instance.lastPlayed) && `${fmtPlaytime(instance.playtimeMs) ? ' · ' : ''}ostatnio: ${fmtDate(instance.lastPlayed)}`}
-      </div>
-      {(worlds.length > 0 || instance.serverAddress) && (
-        <div className="home-quickplay-list">
-          {worlds.slice(0, WORLDS_PER_CARD).map((w) => (
-            <button key={w.name} className="ghost home-quickplay-chip" disabled={isLaunching} onClick={() => play(w.name)}>
-              🌍 {w.name}
-            </button>
-          ))}
-          {instance.serverAddress && (
-            <button className="ghost home-quickplay-chip" disabled={isLaunching} onClick={() => play()}>
-              🌐 {instance.serverAddress}
-            </button>
+      {(playtime || lastPlayed) && (
+        <div className="home-recent-stats">
+          {playtime && (
+            <span title="Czas gry">
+              <Clock size={13} /> {playtime}
+            </span>
+          )}
+          {lastPlayed && (
+            <span title="Ostatnio grane">
+              <CalendarDays size={13} /> {lastPlayed}
+            </span>
           )}
         </div>
       )}
-      <button className="primary" style={{ marginTop: 'auto' }} disabled={isLaunching} onClick={() => play()}>
-        {isLaunching ? 'Uruchamianie…' : '▶ Graj'}
+      {(worlds.length > 0 || instance.serverAddress) && (
+        <div className="home-quickplay">
+          <div className="home-quickplay-label">Szybki start</div>
+          <div className="home-quickplay-list">
+            {worlds.slice(0, WORLDS_PER_CARD).map((w) => (
+              <button
+                key={w.name}
+                className="home-quickplay-chip"
+                title="Uruchom prosto w tym świecie"
+                disabled={isLaunching}
+                onClick={() => play(w.name)}
+              >
+                <Earth size={13} /> <span className="truncate">{w.name}</span>
+              </button>
+            ))}
+            {instance.serverAddress && (
+              <button
+                className="home-quickplay-chip"
+                title="Uruchom i dołącz do serwera"
+                disabled={isLaunching}
+                onClick={() => play()}
+              >
+                <Globe size={13} /> <span className="truncate">{instance.serverAddress}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      <button className="primary home-play" disabled={isLaunching} onClick={() => play()}>
+        {isLaunching ? (
+          <>
+            <Loader2 size={16} className="spin" /> Uruchamianie…
+          </>
+        ) : (
+          <>
+            <Play size={16} fill="currentColor" /> Graj
+          </>
+        )}
       </button>
     </div>
   );
@@ -98,9 +127,9 @@ export function HomePage() {
           <h3>Ostatnio grane</h3>
           {recent.length === 0 ? (
             <div className="mod-empty">
-              Jeszcze nic nie grane.{' '}
-              <button className="ghost" onClick={() => setPage('instances')}>
-                Przejdź do instancji →
+              <p>Jeszcze nic nie grane.</p>
+              <button className="ghost" onClick={() => transition(() => setPage('instances'))}>
+                Przejdź do instancji <ArrowRight size={16} />
               </button>
             </div>
           ) : (
@@ -121,9 +150,11 @@ export function HomePage() {
             <div className="skin-stage">
               <SkinView account={active} key={active.id} width={150} height={210} />
             </div>
-            <div className="skin-hint">🖱️ Przeciągnij, aby obrócić postać</div>
+            <div className="skin-hint">
+              <MousePointer2 size={13} /> Przeciągnij, aby obrócić
+            </div>
             <button className="primary" onClick={() => setShowSkins(true)}>
-              🎨 Biblioteka skinów
+              <Palette size={16} /> Biblioteka skinów
             </button>
           </div>
         )}

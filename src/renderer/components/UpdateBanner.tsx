@@ -1,3 +1,4 @@
+import { Sparkles } from 'lucide-react';
 import { useStore } from '../store';
 
 /** Floating banner shown when a launcher update has finished downloading. */
@@ -7,8 +8,9 @@ export function UpdateBanner() {
 
   return (
     <div className="update-banner">
+      <Sparkles size={18} className="update-banner-icon" />
       <span className="update-banner-text">
-        🎉 Nowa wersja <strong>{updateStatus.version}</strong> jest gotowa do zainstalowania.
+        Nowa wersja <strong>{updateStatus.version}</strong> jest gotowa do zainstalowania.
       </span>
       <div className="update-banner-actions">
         <button className="primary" onClick={() => window.api.updates.install()}>

@@ -36,6 +36,7 @@
     "electron-builder": "^24.13.0",
     "electron-vite": "^2.0.0",
     "jimp": "^0.22.12",
+    "lucide-react": "^1.57.0",
     "png-to-ico": "^3.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

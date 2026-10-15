@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { MouseEvent } from 'react';
+import { closeWithTransition } from '../ui/viewTransition';
 
 /**
  * Returns props for a modal backdrop that only triggers `onClose` when the
@@ -15,7 +16,9 @@ export function useBackdropClose(onClose: () => void) {
       downOnBackdrop.current = e.target === e.currentTarget;
     },
     onClick: (e: MouseEvent) => {
-      if (downOnBackdrop.current && e.target === e.currentTarget) onClose();
+      if (downOnBackdrop.current && e.target === e.currentTarget) {
+        closeWithTransition((e.currentTarget as Element).querySelector(':scope > .modal'), onClose);
+      }
       downOnBackdrop.current = false;
     }
   };

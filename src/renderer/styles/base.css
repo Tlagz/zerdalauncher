@@ -1,0 +1,335 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  line-height: 1.25;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text);
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  /* Press snaps down fast, release springs back. No backdrop-filter: dozens of
+     blurred buttons in long lists cost a lot of GPU for no visible gain. */
+  transition: background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur), color var(--dur-fast),
+    transform 0.38s var(--ease-spring);
+}
+button:hover:not(:disabled) {
+  background: var(--glass-2);
+  border-color: var(--glass-border-strong);
+}
+button:active:not(:disabled) {
+  transform: scale(0.96);
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur), var(--dur-fast), 70ms;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button.primary {
+  background: var(--grad-play);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-weight: 600;
+  box-shadow: 0 8px 24px -8px rgba(var(--accent-strong-rgb), 0.7);
+}
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 12px 32px -8px rgba(var(--accent-strong-rgb), 0.85);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+button.danger {
+  border-color: rgba(251, 113, 133, 0.3);
+  color: var(--danger);
+  background: rgba(251, 113, 133, 0.06);
+}
+button.danger:hover:not(:disabled) {
+  background: rgba(251, 113, 133, 0.14);
+}
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+}
+button.ghost:hover:not(:disabled) {
+  background: var(--glass);
+  color: var(--text);
+}
+button > svg {
+  flex: none;
+}
+button.btn-block {
+  width: 100%;
+}
+/* Small / square icon-only button variants. */
+button.btn-sm {
+  padding: 6px 11px;
+  font-size: var(--fs-md);
+}
+button.icon-btn {
+  padding: 0;
+  width: 34px;
+  height: 34px;
+}
+
+/* ---------- Text & layout utilities ---------- */
+.text-dim {
+  color: var(--text-dim);
+}
+.text-faint {
+  color: var(--text-faint);
+}
+.field-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  margin-top: 6px;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text-dim);
+  cursor: pointer;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+.check-row input[type='checkbox'] {
+  width: auto;
+}
+/* Input with a leading search icon (ui/SearchField). */
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-field-icon {
+  position: absolute;
+  left: 13px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.search-field input {
+  padding-left: 38px;
+}
+.empty-actions {
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: center;
+  margin-top: var(--sp-4);
+}
+.mod-empty p {
+  margin: 0 0 var(--sp-3);
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Inputs ---------- */
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.16s, box-shadow 0.16s, background 0.16s;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-faint);
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgba(var(--accent-strong-rgb), 0.18);
+  background: rgba(0, 0, 0, 0.4);
+}
+select option {
+  background: #0c0e16;
+}
+label {
+  display: block;
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* range slider */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  padding: 0;
+  background: linear-gradient(90deg, var(--accent-strong), #22d3ee);
+  border: none;
+  border-radius: 999px;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent-strong);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(var(--accent-strong-rgb), 0.6);
+}
+input[type='checkbox'] {
+  accent-color: var(--accent-strong);
+}
+
+/* ---------- Misc ---------- */
+.empty {
+  text-align: center;
+  padding: 70px 20px;
+  color: var(--text-dim);
+}
+.empty h2 {
+  color: var(--text);
+  margin: 0 0 8px 0;
+  font-size: 22px;
+}
+.error {
+  background: rgba(251, 113, 133, 0.1);
+  color: var(--danger);
+  padding: 11px 15px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(251, 113, 133, 0.28);
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+  background-clip: padding-box;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes gradientPan {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes floatBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.45); opacity: 0.55; }
+}
+@keyframes barStripes {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 0, 28px 0; }
+}
+@keyframes launchPulse {
+  0%, 100% {
+    border-color: rgba(var(--accent-strong-rgb), 0.55);
+    box-shadow: 0 0 0 1px rgba(var(--accent-strong-rgb), 0.25), 0 0 30px -6px rgba(var(--accent-strong-rgb), 0.55);
+  }
+  50% {
+    border-color: rgba(34, 211, 238, 0.6);
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.3), 0 0 42px -4px rgba(34, 211, 238, 0.7);
+  }
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+
+/* primary button: light sweep + gradient drift */
+button.primary { position: relative; overflow: hidden; background-size: 180% 180%; }
+button.primary:hover:not(:disabled) { animation: gradientPan 3s ease infinite; }
+button.primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: translateX(-200%) skewX(-20deg);
+  pointer-events: none;
+}
+button.primary:hover:not(:disabled)::after {
+  transition: transform 0.7s ease;
+  transform: translateX(360%) skewX(-20deg);
+}
+
+/* respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

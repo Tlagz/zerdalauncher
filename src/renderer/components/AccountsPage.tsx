@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { SkinView } from './SkinView';
 import { SkinLibraryModal } from './SkinLibraryModal';
+import { AccountAvatar } from './AccountAvatar';
+import { MousePointer2, Palette, LogIn, UserPlus, Check, Trash2, Users } from 'lucide-react';
 import { confirmDialog } from '../ui/feedback';
 
 export function AccountsPage() {
@@ -79,9 +81,11 @@ export function AccountsPage() {
             <div className="skin-type">
               {active.type === 'microsoft' ? 'Microsoft · Premium' : 'Konto offline'}
             </div>
-            <div className="skin-hint">🖱️ Przeciągnij, aby obrócić postać</div>
-            <button className="primary" style={{ marginTop: 14 }} onClick={() => setShowSkins(true)}>
-              🎨 Biblioteka skinów
+            <div className="skin-hint">
+              <MousePointer2 size={13} /> Przeciągnij, aby obrócić postać
+            </div>
+            <button className="primary skin-library-btn" onClick={() => setShowSkins(true)}>
+              <Palette size={16} /> Biblioteka skinów
             </button>
           </div>
         </div>
@@ -92,43 +96,49 @@ export function AccountsPage() {
       )}
 
       <div className="section">
-        <h3>Twoje konta</h3>
+        <h3>
+          <Users size={16} /> Twoje konta
+        </h3>
         {accounts.length === 0 && <div className="empty">Brak kont.</div>}
         {accounts.map((a) => (
           <div key={a.id} className={`account-row ${a.id === activeAccountId ? 'active' : ''}`}>
-            <div className="avatar">{a.username.charAt(0).toUpperCase()}</div>
+            <AccountAvatar account={a} />
             <div className="meta">
-              <div style={{ fontWeight: 600 }}>{a.username}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+              <div className="account-name">{a.username}</div>
+              <div className="account-type">
                 {a.type === 'microsoft' ? 'Microsoft (Premium)' : 'Offline'}
                 {a.id === activeAccountId && <span className="badge"> • aktywne</span>}
               </div>
             </div>
             {a.id !== activeAccountId && (
-              <button onClick={() => handleSelect(a.id)}>Wybierz</button>
+              <button onClick={() => handleSelect(a.id)}>
+                <Check size={15} /> Wybierz
+              </button>
             )}
             <button className="danger" onClick={() => handleRemove(a.id)}>
-              Usuń
+              <Trash2 size={15} /> Usuń
             </button>
           </div>
         ))}
       </div>
 
       <div className="section">
-        <h3>Dodaj konto</h3>
+        <h3>
+          <UserPlus size={16} /> Dodaj konto
+        </h3>
         <div className="field-grid">
           <div>
             <label>Microsoft</label>
-            <button className="primary" onClick={handleMs} disabled={busy} style={{ width: '100%' }}>
-              Zaloguj się przez Microsoft
+            <button className="primary btn-block" onClick={handleMs} disabled={busy}>
+              <LogIn size={16} /> Zaloguj się przez Microsoft
             </button>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
+            <div className="field-hint">
               Wymaga zakupionego Minecraft Java Edition.
             </div>
           </div>
           <div>
             <label>Offline</label>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="inline-form">
               <input
                 value={offlineName}
                 onChange={(e) => setOfflineName(e.target.value)}
@@ -136,10 +146,10 @@ export function AccountsPage() {
                 maxLength={16}
               />
               <button onClick={handleOffline} disabled={busy || !offlineName.trim()}>
-                Dodaj
+                <UserPlus size={15} /> Dodaj
               </button>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
+            <div className="field-hint">
               Tylko do gry na serwerach offline / lokalnych światach.
             </div>
           </div>

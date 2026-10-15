@@ -1,26 +1,33 @@
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { Plus, Boxes, Import, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 import { CreateInstanceModal } from './CreateInstanceModal';
 import { ModpackBrowserModal } from './ModpackBrowserModal';
 import { InstanceCard } from './InstanceCard';
 import { InstanceDetail } from './InstanceDetail';
 import { alertDialog } from '../ui/feedback';
-
-function fmtTotal(ms: number): string {
-  if (ms < 60000) return '';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
+import { SearchField } from '../ui/SearchField';
+import { formatPlaytime, plural } from '../format';
+import { transition } from '../ui/viewTransition';
 
 export function InstancesPage() {
   const { instances, refreshInstances } = useStore();
-  const totalPlaytime = fmtTotal(instances.reduce((s, i) => s + (i.playtimeMs ?? 0), 0));
+  const totalPlaytime = formatPlaytime(instances.reduce((s, i) => s + (i.playtimeMs ?? 0), 0));
   const [showCreate, setShowCreate] = useState(false);
   const [showPacks, setShowPacks] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The card that morphs into / back from the detail view. It must carry its
+  // shared-element names *before* the transition snapshots the old state, and
+  // keeps them afterwards so "back" can morph into it again.
+  const [morphId, setMorphId] = useState<string | null>(null);
+
+  const openInstance = (id: string) => {
+    flushSync(() => setMorphId(id));
+    transition(() => setSelectedId(id));
+  };
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('lastPlayed');
 
@@ -59,7 +66,7 @@ export function InstancesPage() {
   };
 
   if (selected) {
-    return <InstanceDetail instance={selected} onBack={() => setSelectedId(null)} />;
+    return <InstanceDetail instance={selected} onBack={() => transition(() => setSelectedId(null))} />;
   }
 
   return (
@@ -72,20 +79,21 @@ export function InstancesPage() {
               ? importMsg ?? 'Importuję paczkę…'
               : instances.length === 0
               ? 'Brak instancji — stwórz pierwszą, by zacząć grać.'
-              : `${instances.length} ${instances.length === 1 ? 'instancja' : 'instancje'}${
-                  totalPlaytime ? ` · ⏱ ${totalPlaytime} łącznie` : ''
+              : `${instances.length} ${plural(instances.length, 'instancja', 'instancje', 'instancji')}${
+                  totalPlaytime ? ` · ${totalPlaytime} gry łącznie` : ''
                 }`}
           </div>
         </div>
         <div className="header-actions">
           <button className="ghost" onClick={() => setShowPacks(true)} disabled={importing}>
-            🧰 Modpacki
+            <Boxes size={16} /> Modpacki
           </button>
           <button className="ghost" onClick={handleImport} disabled={importing}>
-            {importing ? 'Importuję…' : '📥 Importuj'}
+            {importing ? <Loader2 size={16} className="spin" /> : <Import size={16} />}
+            {importing ? 'Importuję…' : 'Importuj'}
           </button>
           <button className="primary" onClick={() => setShowCreate(true)} disabled={importing}>
-            + Nowa instancja
+            <Plus size={16} /> Nowa instancja
           </button>
         </div>
       </div>
@@ -94,23 +102,23 @@ export function InstancesPage() {
         <div className="empty">
           <h2>Witaj!</h2>
           <p>Stwórz pierwszą instancję Minecraft, pobierz modpack lub zaimportuj paczkę.</p>
-          <div className="login-actions" style={{ marginTop: 16, justifyContent: 'center' }}>
+          <div className="empty-actions">
             <button className="primary" onClick={() => setShowCreate(true)}>
-              Stwórz instancję
+              <Plus size={16} /> Stwórz instancję
             </button>
             <button className="ghost" onClick={() => setShowPacks(true)}>
-              Przeglądaj modpacki
+              <Boxes size={16} /> Przeglądaj modpacki
             </button>
           </div>
         </div>
       ) : (
         <>
           <div className="instances-toolbar">
-            <input
+            <SearchField
               className="instances-search"
-              placeholder="🔎 Szukaj instancji…"
+              placeholder="Szukaj instancji…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
             />
             <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="lastPlayed">Ostatnio grane</option>
@@ -126,7 +134,12 @@ export function InstancesPage() {
           ) : (
             <div className="instance-grid">
               {visible.map((inst) => (
-                <InstanceCard key={inst.id} instance={inst} onOpen={() => setSelectedId(inst.id)} />
+                <InstanceCard
+                  key={inst.id}
+                  instance={inst}
+                  morph={inst.id === morphId}
+                  onOpen={() => openInstance(inst.id)}
+                />
               ))}
             </div>
           )}

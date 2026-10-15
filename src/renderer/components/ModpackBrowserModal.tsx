@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Package, Download, ExternalLink } from 'lucide-react';
 import { SourceSwitch } from './SourceSwitch';
 import { VersionPickerModal } from './VersionPickerModal';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import { ModalHeader } from '../ui/ModalHeader';
+import { SearchField } from '../ui/SearchField';
+import { formatDownloads } from '../format';
+import { openExternal, projectUrl } from '../links';
 import type { ModProvider, ModSearchResult } from '../../shared/types';
-
-function formatDownloads(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
-  return String(n);
-}
 
 export function ModpackBrowserModal({
   onClose,
@@ -57,17 +56,11 @@ export function ModpackBrowserModal({
   return createPortal(
     <div className="modal-backdrop" {...backdrop}>
       <div className="modal mod-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Przeglądaj modpacki</h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
-              Instalacja tworzy nową instancję ze wszystkimi modami
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        <ModalHeader
+          title="Przeglądaj modpacki"
+          subtitle="Instalacja tworzy nową instancję ze wszystkimi modami"
+          onClose={onClose}
+        />
 
         <div className="mod-tabs">
           <SourceSwitch value={provider} onChange={setProvider} />
@@ -76,18 +69,18 @@ export function ModpackBrowserModal({
         {error && <div className="error">{error}</div>}
 
         <div className="pack-filters">
-          <input
+          <SearchField
             autoFocus
+            className="pack-query"
             placeholder="Szukaj modpacków (np. fabulously, better mc, create)…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ flex: 1 }}
+            onChange={setQuery}
           />
           <input
+            className="pack-mc"
             placeholder="Wersja MC (opcj.)"
             value={mcFilter}
             onChange={(e) => setMcFilter(e.target.value)}
-            style={{ width: 130 }}
           />
           <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
             <option value="relevance">Trafność</option>
@@ -107,7 +100,9 @@ export function ModpackBrowserModal({
                 {r.iconUrl ? (
                   <img className="mod-icon" src={r.iconUrl} alt="" loading="lazy" />
                 ) : (
-                  <div className="mod-icon placeholder">📦</div>
+                  <div className="mod-icon placeholder">
+                    <Package size={22} />
+                  </div>
                 )}
                 <div className="mod-info">
                   <div className="mod-title">{r.title}</div>
@@ -116,9 +111,16 @@ export function ModpackBrowserModal({
                     <span className={`src-badge ${r.provider}`}>
                       {r.provider === 'curseforge' ? 'CurseForge' : 'Modrinth'}
                     </span>
-                    {r.author} · ⬇ {formatDownloads(r.downloads)}
+                    {r.author} · <Download size={11} /> {formatDownloads(r.downloads)}
                   </div>
                 </div>
+                <button
+                  className="ghost"
+                  title="Otwórz stronę w przeglądarce"
+                  onClick={() => openExternal(projectUrl(r.provider, r.projectId, r.slug))}
+                >
+                  <ExternalLink size={15} /> Strona
+                </button>
                 <button className="primary" onClick={() => setPickerFor(r)}>
                   Instaluj…
                 </button>

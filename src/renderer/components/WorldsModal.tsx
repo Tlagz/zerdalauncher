@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ArchiveRestore, FolderOpen, Earth, Save, Trash2, Loader2 } from 'lucide-react';
 import { useBackdropClose } from '../hooks/useBackdropClose';
 import { confirmDialog } from '../ui/feedback';
+import { ModalHeader } from '../ui/ModalHeader';
+import { formatDate, formatSize } from '../format';
 import type { Instance, WorldInfo } from '../../shared/types';
-
-function fmtSize(mb: number): string {
-  return mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : Math.max(1, Math.round(mb)) + ' MB';
-}
-function fmtDate(ms?: number): string {
-  if (!ms) return '';
-  return new Date(ms).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 export function WorldsModal({ instance, onClose }: { instance: Instance; onClose: () => void }) {
   const [worlds, setWorlds] = useState<WorldInfo[]>([]);
@@ -75,24 +70,18 @@ export function WorldsModal({ instance, onClose }: { instance: Instance; onClose
   return createPortal(
     <div className="modal-backdrop" {...backdrop}>
       <div className="modal mod-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Światy i kopie — {instance.name}</h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
-              Twórz kopie zapasowe światów i przywracaj je z plików .zip
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        <ModalHeader
+          title={`Światy i kopie — ${instance.name}`}
+          subtitle="Twórz kopie zapasowe światów i przywracaj je z plików .zip"
+          onClose={onClose}
+        />
 
         <div className="installed-toolbar">
           <button className="ghost" onClick={restore}>
-            📥 Przywróć z kopii…
+            <ArchiveRestore size={16} /> Przywróć z kopii…
           </button>
           <button className="ghost" onClick={() => window.api.worlds.openFolder(instance.id)}>
-            📂 Folder zapisów
+            <FolderOpen size={16} /> Folder zapisów
           </button>
         </div>
 
@@ -106,19 +95,22 @@ export function WorldsModal({ instance, onClose }: { instance: Instance; onClose
           )}
           {worlds.map((w) => (
             <div className="mod-row" key={w.name}>
-              <div className="mod-icon placeholder">🌍</div>
+              <div className="mod-icon placeholder">
+                <Earth size={22} />
+              </div>
               <div className="mod-info">
                 <div className="mod-title">{w.name}</div>
                 <div className="mod-sub">
-                  {fmtSize(w.sizeMb)}
-                  {w.lastPlayed ? ` · ostatnio: ${fmtDate(w.lastPlayed)}` : ''}
+                  {formatSize(w.sizeMb * 1024 * 1024) || '< 1 KB'}
+                  {w.lastPlayed ? ` · ostatnio: ${formatDate(w.lastPlayed)}` : ''}
                 </div>
               </div>
               <button className="primary" disabled={busy === w.name} onClick={() => backup(w)}>
-                {busy === w.name ? 'Tworzę…' : '💾 Kopia'}
+                {busy === w.name ? <Loader2 size={15} className="spin" /> : <Save size={15} />}
+                {busy === w.name ? 'Tworzę…' : 'Kopia'}
               </button>
-              <button className="danger" onClick={() => del(w)} title="Usuń świat">
-                🗑
+              <button className="danger icon-btn" onClick={() => del(w)} title="Usuń świat">
+                <Trash2 size={16} />
               </button>
             </div>
           ))}

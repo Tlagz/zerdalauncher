@@ -1,29 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { useBackdropClose } from '../hooks/useBackdropClose';
 import { confirmDialog, alertDialog, showToast } from '../ui/feedback';
+import { SkinFace } from './SkinFace';
+import { ModalHeader } from '../ui/ModalHeader';
+import { Plus, RotateCcw, TriangleAlert, Check, Trash2, Loader2 } from 'lucide-react';
 import type { Account, SkinEntry } from '../../shared/types';
-
-/** Pixel-art face crop (head + hat overlay) drawn from a skin PNG data URL. */
-function SkinFace({ src, size = 76 }: { src?: string; size?: number }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const cv = ref.current;
-    if (!cv || !src) return;
-    const ctx = cv.getContext('2d');
-    if (!ctx) return;
-    const img = new Image();
-    img.onload = () => {
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, size, size);
-      ctx.drawImage(img, 8, 8, 8, 8, 0, 0, size, size); // base face
-      ctx.drawImage(img, 40, 8, 8, 8, 0, 0, size, size); // hat layer
-    };
-    img.src = src;
-  }, [src, size]);
-  return <canvas ref={ref} width={size} height={size} className="skin-face" />;
-}
 
 export function SkinLibraryModal({ account, onClose }: { account: Account; onClose: () => void }) {
   const { refreshAccounts } = useStore();
@@ -123,35 +106,31 @@ export function SkinLibraryModal({ account, onClose }: { account: Account; onClo
   return createPortal(
     <div className="modal-backdrop" {...backdrop}>
       <div className="modal mod-modal skin-library" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Biblioteka skinów</h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
+        <ModalHeader
+          title="Biblioteka skinów"
+          subtitle={
+            <span>
               Konto: <b>{account.username}</b> ·{' '}
               {isPremium ? 'Microsoft — zmiana działa też w grze' : 'Offline — podgląd w launcherze'}
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+            </span>
+          }
+          onClose={onClose}
+        />
 
         <div className="skin-toolbar">
           <button className="primary" onClick={add}>
-            ＋ Dodaj skina (PNG 64×64)
+            <Plus size={16} /> Dodaj skina (PNG 64×64)
           </button>
           {account.skinId && (
             <button className="ghost" onClick={reset} disabled={busy === 'reset'}>
-              ↺ Domyślny skin
+              <RotateCcw size={15} /> Domyślny skin
             </button>
           )}
         </div>
 
         {!isPremium && (
-          <div
-            className="error"
-            style={{ background: '#2a2418', color: 'var(--warning)', borderColor: '#4a3a1f' }}
-          >
+          <div className="notice notice-warning">
+            <TriangleAlert size={16} />
             To konto jest offline — skin pokaże się tylko w launcherze. Zmiana skina w grze online
             wymaga konta Microsoft (Premium).
           </div>
@@ -168,7 +147,11 @@ export function SkinLibraryModal({ account, onClose }: { account: Account; onClo
               const isActive = account.skinId === s.id;
               return (
                 <div className={`skin-card ${isActive ? 'active' : ''}`} key={s.id}>
-                  {isActive && <span className="skin-active-badge">✓ Aktywny</span>}
+                  {isActive && (
+                    <span className="skin-active-badge">
+                      <Check size={11} /> Aktywny
+                    </span>
+                  )}
                   <div className="skin-card-preview">
                     <SkinFace src={data[s.id]} />
                   </div>
@@ -195,10 +178,11 @@ export function SkinLibraryModal({ account, onClose }: { account: Account; onClo
                   </div>
                   <div className="skin-card-actions">
                     <button className="primary" onClick={() => apply(s)} disabled={busy === s.id}>
+                      {busy === s.id && <Loader2 size={14} className="spin" />}
                       {busy === s.id ? 'Ustawiam…' : isActive ? 'Ustaw ponownie' : 'Ustaw'}
                     </button>
                     <button className="danger" title="Usuń z biblioteki" onClick={() => remove(s)}>
-                      🗑
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>

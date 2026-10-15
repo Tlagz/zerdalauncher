@@ -1,4 +1,10 @@
+import { useIndicator } from '../ui/useIndicator';
 import type { ModProvider } from '../../shared/types';
+
+const OPTIONS: Array<{ id: ModProvider; label: string }> = [
+  { id: 'modrinth', label: 'Modrinth' },
+  { id: 'curseforge', label: 'CurseForge' }
+];
 
 /** Segmented control to pick the content source (Modrinth / CurseForge). */
 export function SourceSwitch({
@@ -8,26 +14,28 @@ export function SourceSwitch({
   value: ModProvider;
   onChange: (p: ModProvider) => void;
 }) {
+  const indicator = useIndicator<HTMLDivElement>(value);
+
   return (
-    <div className="source-switch" role="tablist" aria-label="Źródło">
-      <button
-        role="tab"
-        aria-selected={value === 'modrinth'}
-        className={value === 'modrinth' ? 'active modrinth' : ''}
-        onClick={() => onChange('modrinth')}
-      >
-        <span className="src-dot modrinth" />
-        Modrinth
-      </button>
-      <button
-        role="tab"
-        aria-selected={value === 'curseforge'}
-        className={value === 'curseforge' ? 'active curseforge' : ''}
-        onClick={() => onChange('curseforge')}
-      >
-        <span className="src-dot curseforge" />
-        CurseForge
-      </button>
+    <div className="source-switch" role="tablist" aria-label="Źródło" ref={indicator.ref}>
+      <span
+        className={`slide-indicator source-indicator ${value} ${indicator.ready ? 'ready' : ''}`}
+        style={indicator.style}
+        aria-hidden
+      />
+      {OPTIONS.map((o) => (
+        <button
+          key={o.id}
+          role="tab"
+          aria-selected={value === o.id}
+          data-active={value === o.id}
+          className={value === o.id ? `active ${o.id}` : ''}
+          onClick={() => onChange(o.id)}
+        >
+          <span className={`src-dot ${o.id}`} />
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

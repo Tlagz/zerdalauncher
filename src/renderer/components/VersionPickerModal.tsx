@@ -1,18 +1,10 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Info, Loader2 } from 'lucide-react';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import { ModalHeader } from '../ui/ModalHeader';
+import { formatDate, formatSize } from '../format';
 import type { ModFile } from '../../shared/types';
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('pl-PL', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-function formatSize(bytes?: number): string {
-  if (!bytes) return '';
-  const mb = bytes / (1024 * 1024);
-  return mb >= 1 ? mb.toFixed(1) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
-}
 
 interface PackProgress {
   current: number;
@@ -86,19 +78,18 @@ export function VersionPickerModal({
   return createPortal(
     <div className="modal-backdrop" {...backdrop}>
       <div className="modal mod-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Wybierz wersję — {title}</h3>
-            {subtitle && (
-              <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>{subtitle}</div>
-            )}
-          </div>
-          <button className="ghost" onClick={onClose} disabled={!!busyId}>
-            ✕
-          </button>
-        </div>
+        <ModalHeader
+          title={`Wybierz wersję — ${title}`}
+          subtitle={subtitle}
+          onClose={onClose}
+          closeDisabled={!!busyId}
+        />
 
-        {note && <div className="picker-note">ℹ {note}</div>}
+        {note && (
+          <div className="picker-note">
+            <Info size={15} /> {note}
+          </div>
+        )}
         {error && <div className="error">{error}</div>}
 
         {busyId && trackProgress && (
@@ -129,12 +120,18 @@ export function VersionPickerModal({
                   <div className="ver-sub">
                     {v.gameVersions.slice(0, 6).join(', ')}
                     {v.gameVersions.length > 6 ? '…' : ''}
-                    {v.datePublished ? ` · ${formatDate(v.datePublished)}` : ''}
+                    {v.datePublished ? ` · ${formatDate(Date.parse(v.datePublished))}` : ''}
                     {v.size ? ` · ${formatSize(v.size)}` : ''}
                   </div>
                 </div>
                 <button className="primary" disabled={!!busyId} onClick={() => handle(v)}>
-                  {busyId === v.fileId ? 'Instaluję…' : 'Instaluj'}
+                  {busyId === v.fileId ? (
+                    <>
+                      <Loader2 size={15} className="spin" /> Instaluję…
+                    </>
+                  ) : (
+                    'Instaluj'
+                  )}
                 </button>
               </div>
             ))}

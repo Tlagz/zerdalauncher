@@ -1,4 +1,20 @@
 import { useState } from 'react';
+import {
+  ArrowLeft,
+  Play,
+  Loader2,
+  Puzzle,
+  Terminal,
+  Earth,
+  SlidersHorizontal,
+  Copy,
+  Star,
+  Package,
+  FolderOpen,
+  Trash2,
+  Globe,
+  type LucideIcon
+} from 'lucide-react';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
@@ -7,18 +23,8 @@ import { ConsoleModal } from './ConsoleModal';
 import { EditInstanceModal } from './EditInstanceModal';
 import { WorldsModal } from './WorldsModal';
 import { confirmDialog, alertDialog, showToast } from '../ui/feedback';
+import { formatDate, formatPlaytime } from '../format';
 import type { Instance } from '../../shared/types';
-
-function fmtPlaytime(ms?: number): string {
-  if (!ms || ms < 60000) return '—';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-function fmtDate(ms?: number): string {
-  if (!ms) return '—';
-  return new Date(ms).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 export function InstanceDetail({ instance, onBack }: { instance: Instance; onBack: () => void }) {
   const { refreshInstances } = useStore();
@@ -69,32 +75,33 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
     }
   };
 
-  const actions = [
-    { icon: '🧩', label: 'Mody, packi, shadery', onClick: () => setShowMods(true) },
-    { icon: '🖥', label: 'Konsola (logi gry)', onClick: () => setShowConsole(true) },
-    { icon: '🌍', label: 'Światy i kopie', onClick: () => setShowWorlds(true) },
-    { icon: '⚙', label: 'Ustawienia instancji', onClick: () => setShowEdit(true) },
-    { icon: '📑', label: 'Duplikuj instancję', onClick: handleDuplicate },
+  const actions: Array<{ icon: LucideIcon; label: string; onClick: () => void; filled?: boolean }> = [
+    { icon: Puzzle, label: 'Mody, packi, shadery', onClick: () => setShowMods(true) },
+    { icon: Terminal, label: 'Konsola (logi gry)', onClick: () => setShowConsole(true) },
+    { icon: Earth, label: 'Światy i kopie', onClick: () => setShowWorlds(true) },
+    { icon: SlidersHorizontal, label: 'Ustawienia instancji', onClick: () => setShowEdit(true) },
+    { icon: Copy, label: 'Duplikuj instancję', onClick: handleDuplicate },
     {
-      icon: instance.pinned ? '★' : '☆',
+      icon: Star,
       label: instance.pinned ? 'Odepnij z góry' : 'Przypnij na górę',
-      onClick: togglePin
+      onClick: togglePin,
+      filled: instance.pinned
     },
-    { icon: '📦', label: 'Eksportuj .zerda', onClick: handleExport },
-    { icon: '📁', label: 'Otwórz folder', onClick: () => window.api.instances.openFolder(instance.id) }
+    { icon: Package, label: 'Eksportuj .zerda', onClick: handleExport },
+    { icon: FolderOpen, label: 'Otwórz folder', onClick: () => window.api.instances.openFolder(instance.id) }
   ];
 
   return (
     <div className="detail-fade">
       <button className="ghost detail-back" onClick={onBack}>
-        ← Wróć do instancji
+        <ArrowLeft size={16} /> Wróć do instancji
       </button>
 
       <div className="detail-header">
-        <InstanceIcon instance={instance} className="detail-icon" />
+        <InstanceIcon instance={instance} className="detail-icon" morph />
         <div className="detail-head-info">
           <div className="detail-name">{instance.name}</div>
-          <div className="instance-meta" style={{ marginTop: 4 }}>
+          <div className="instance-meta detail-meta">
             <span className="tag">{instance.mcVersion}</span>
             <span className={`tag ${instance.loader}`}>{instance.loader}</span>
             {instance.loaderVersion && <span className="tag">{instance.loaderVersion}</span>}
@@ -102,13 +109,21 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
           </div>
         </div>
         <button className="primary detail-play" onClick={() => launch()} disabled={isLaunching}>
-          {isLaunching ? 'Uruchamianie…' : '▶ Graj'}
+          {isLaunching ? (
+            <>
+              <Loader2 size={18} className="spin" /> Uruchamianie…
+            </>
+          ) : (
+            <>
+              <Play size={18} fill="currentColor" /> Graj
+            </>
+          )}
         </button>
       </div>
 
       <div className="detail-statgrid">
         <div className="detail-stat">
-          <span className="ds-val">{fmtPlaytime(instance.playtimeMs)}</span>
+          <span className="ds-val">{formatPlaytime(instance.playtimeMs) || '—'}</span>
           <span className="ds-key">Czas gry</span>
         </div>
         <div className="detail-stat">
@@ -116,28 +131,30 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
           <span className="ds-key">Uruchomień</span>
         </div>
         <div className="detail-stat">
-          <span className="ds-val">{fmtDate(instance.lastPlayed)}</span>
+          <span className="ds-val">{formatDate(instance.lastPlayed) || '—'}</span>
           <span className="ds-key">Ostatnio grane</span>
         </div>
         <div className="detail-stat">
-          <span className="ds-val">{fmtDate(instance.createdAt)}</span>
+          <span className="ds-val">{formatDate(instance.createdAt) || '—'}</span>
           <span className="ds-key">Utworzono</span>
         </div>
       </div>
 
       {instance.serverAddress && (
-        <div className="detail-server">🌐 Auto-dołączanie na serwer: <b>{instance.serverAddress}</b></div>
+        <div className="detail-server">
+          <Globe size={15} /> Auto-dołączanie na serwer: <b>{instance.serverAddress}</b>
+        </div>
       )}
 
       <div className="detail-actions">
-        {actions.map((a) => (
-          <button className="detail-tile" key={a.label} onClick={a.onClick}>
-            <span className="dt-ic">{a.icon}</span>
-            {a.label}
+        {actions.map(({ icon: Icon, label, onClick, filled }) => (
+          <button className="detail-tile" key={label} onClick={onClick}>
+            <Icon className="dt-ic" fill={filled ? 'currentColor' : 'none'} />
+            {label}
           </button>
         ))}
         <button className="detail-tile danger" onClick={handleDelete}>
-          <span className="dt-ic">🗑</span>
+          <Trash2 className="dt-ic" />
           Usuń instancję
         </button>
       </div>

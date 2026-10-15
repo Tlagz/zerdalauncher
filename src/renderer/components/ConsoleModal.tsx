@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { TriangleAlert, Copy, FolderOpen, Eraser } from 'lucide-react';
 import { useStore } from '../store';
+import { useBackdropClose } from '../hooks/useBackdropClose';
+import { ModalHeader } from '../ui/ModalHeader';
 import type { Instance } from '../../shared/types';
 
 // Telltale signs that the game crashed rather than exiting cleanly.
@@ -41,32 +44,33 @@ export function ConsoleModal({ instance, onClose }: { instance: Instance; onClos
     ['preparing', 'downloading', 'launching', 'running'].includes(launchStatus.state);
 
   const crashed = useMemo(() => !!log && CRASH_RE.test(log), [log]);
+  const backdrop = useBackdropClose(onClose);
 
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" {...backdrop}>
       <div className="modal console-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>Konsola — {instance.name}</h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
+        <ModalHeader
+          title={`Konsola — ${instance.name}`}
+          subtitle={
+            <>
               <span className={`console-dot ${running ? 'on' : 'off'}`} />
               {running ? 'Gra działa' : 'Zatrzymana'} · {instance.mcVersion} · {instance.loader}
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+            </>
+          }
+          onClose={onClose}
+        />
 
         {crashed && (
           <div className="console-crash">
-            <span>⚠ Wygląda na to, że gra się wysypała — szczegóły w logu i pliku crash-report.</span>
+            <span className="console-crash-msg">
+              <TriangleAlert size={16} /> Wygląda na to, że gra się wysypała — szczegóły w logu i pliku crash-report.
+            </span>
             <div className="console-crash-actions">
               <button className="ghost" onClick={copyAll}>
-                📋 Kopiuj log
+                <Copy size={15} /> Kopiuj log
               </button>
               <button className="ghost" onClick={() => window.api.instances.openCrashReports(instance.id)}>
-                📂 crash-reports
+                <FolderOpen size={15} /> crash-reports
               </button>
             </div>
           </div>
@@ -74,12 +78,12 @@ export function ConsoleModal({ instance, onClose }: { instance: Instance; onClos
 
         <div className="console-toolbar">
           <button className="ghost" onClick={copyAll} disabled={!log}>
-            📋 Kopiuj
+            <Copy size={15} /> Kopiuj
           </button>
           <button className="ghost" onClick={() => clearLogs(instance.id)} disabled={!log}>
-            🧹 Wyczyść
+            <Eraser size={15} /> Wyczyść
           </button>
-          <label className="console-autoscroll">
+          <label className="check-row console-autoscroll">
             <input
               type="checkbox"
               checked={autoScroll}

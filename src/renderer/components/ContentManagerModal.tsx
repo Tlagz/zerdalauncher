@@ -1,9 +1,43 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  Puzzle,
+  Palette,
+  Sparkles,
+  Cog,
+  WandSparkles,
+  Map as MapIcon,
+  Rocket,
+  Wrench,
+  Sofa,
+  Drumstick,
+  Archive,
+  Mountain,
+  PawPrint,
+  Swords,
+  Library,
+  TrainFront,
+  LayoutGrid,
+  FolderOpen,
+  Download,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  CircleArrowUp,
+  TriangleAlert,
+  Trash2,
+  type LucideIcon
+} from 'lucide-react';
 import { SourceSwitch } from './SourceSwitch';
 import { VersionPickerModal } from './VersionPickerModal';
 import { useBackdropClose } from '../hooks/useBackdropClose';
 import { confirmDialog, showToast } from '../ui/feedback';
+import { ModalHeader } from '../ui/ModalHeader';
+import { SearchField } from '../ui/SearchField';
+import { useIndicator } from '../ui/useIndicator';
+import { formatDownloads, formatSize } from '../format';
+import { openExternal, projectUrl } from '../links';
 import type {
   Instance,
   ModProvider,
@@ -18,7 +52,7 @@ const KIND_LABEL: Record<ContentKind, string> = {
   resourcepack: 'Resource packi',
   shader: 'Shadery'
 };
-const KIND_ICON: Record<ContentKind, string> = { mod: '🧩', resourcepack: '🎨', shader: '✨' };
+const KIND_ICON: Record<ContentKind, LucideIcon> = { mod: Puzzle, resourcepack: Palette, shader: Sparkles };
 const SEARCH_PLACEHOLDER: Record<ContentKind, string> = {
   mod: 'Szukaj modów (np. sodium, jei, create)…',
   resourcepack: 'Szukaj resource packów (np. faithful, fresh)…',
@@ -26,39 +60,32 @@ const SEARCH_PLACEHOLDER: Record<ContentKind, string> = {
 };
 
 // Shared category keys (Modrinth slugs; mapped to CurseForge ids in the backend).
-const MOD_CATEGORIES = [
-  { key: 'technology', label: 'Technologia', icon: '⚙️' },
-  { key: 'magic', label: 'Magia', icon: '✨' },
-  { key: 'adventure', label: 'Przygoda', icon: '🗺️' },
-  { key: 'optimization', label: 'Optymalizacja', icon: '🚀' },
-  { key: 'utility', label: 'Narzędzia', icon: '🔧' },
-  { key: 'decoration', label: 'Dekoracje', icon: '🎨' },
-  { key: 'food', label: 'Jedzenie', icon: '🍖' },
-  { key: 'storage', label: 'Magazyny', icon: '📦' },
-  { key: 'worldgen', label: 'Świat', icon: '🌍' },
-  { key: 'mobs', label: 'Moby', icon: '🐺' },
-  { key: 'equipment', label: 'Ekwipunek', icon: '⚔️' },
-  { key: 'library', label: 'Biblioteki', icon: '📚' },
-  { key: 'transportation', label: 'Transport', icon: '🛤️' }
+const MOD_CATEGORIES: Array<{ key: string; label: string; icon: LucideIcon }> = [
+  { key: 'technology', label: 'Technologia', icon: Cog },
+  { key: 'magic', label: 'Magia', icon: WandSparkles },
+  { key: 'adventure', label: 'Przygoda', icon: MapIcon },
+  { key: 'optimization', label: 'Optymalizacja', icon: Rocket },
+  { key: 'utility', label: 'Narzędzia', icon: Wrench },
+  { key: 'decoration', label: 'Dekoracje', icon: Sofa },
+  { key: 'food', label: 'Jedzenie', icon: Drumstick },
+  { key: 'storage', label: 'Magazyny', icon: Archive },
+  { key: 'worldgen', label: 'Świat', icon: Mountain },
+  { key: 'mobs', label: 'Moby', icon: PawPrint },
+  { key: 'equipment', label: 'Ekwipunek', icon: Swords },
+  { key: 'library', label: 'Biblioteki', icon: Library },
+  { key: 'transportation', label: 'Transport', icon: TrainFront }
 ];
 
 const PAGE_SIZE = 20;
 
-function formatDownloads(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
-  return String(n);
-}
-/** Public project page; both URL forms redirect to the canonical slug page. */
-function projectUrl(provider: ModProvider, projectId: string, slug?: string): string {
-  return provider === 'modrinth'
-    ? `https://modrinth.com/project/${slug || projectId}`
-    : `https://www.curseforge.com/projects/${projectId}`;
-}
-function formatSize(bytes: number): string {
-  if (!bytes) return '';
-  const mb = bytes / (1024 * 1024);
-  return mb >= 1 ? mb.toFixed(1) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
+/** Placeholder tile for items without a remote icon. */
+function KindPlaceholder({ kind }: { kind: ContentKind }) {
+  const Icon = KIND_ICON[kind];
+  return (
+    <div className="mod-icon placeholder">
+      <Icon size={22} />
+    </div>
+  );
 }
 
 export function ContentManagerModal({
@@ -221,44 +248,47 @@ export function ContentManagerModal({
   };
 
   const title = kinds.length > 1 ? 'Zasoby' : KIND_LABEL[kind];
+  const kindIndicator = useIndicator<HTMLDivElement>(kind);
   const backdrop = useBackdropClose(onClose);
 
   return createPortal(
     <div className="modal-backdrop" {...backdrop}>
       <div className="modal mod-modal content-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="mod-modal-head">
-          <div>
-            <h3 style={{ margin: 0 }}>
-              {title} — {instance.name}
-            </h3>
-            <div style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>
-              {instance.mcVersion} · {instance.loader}
-            </div>
-          </div>
-          <button className="ghost" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        <ModalHeader
+          title={`${title} — ${instance.name}`}
+          subtitle={`${instance.mcVersion} · ${instance.loader}`}
+          onClose={onClose}
+        />
 
         {kinds.length > 1 && (
-          <div className="kind-tabs">
-            {kinds.map((k) => (
-              <button
-                key={k}
-                className={`kind-tab ${kind === k ? 'active' : ''}`}
-                onClick={() => {
-                  setKind(k);
-                  setTab('browse');
-                }}
-              >
-                {KIND_ICON[k]} {KIND_LABEL[k]}
-              </button>
-            ))}
+          <div className="kind-tabs" ref={kindIndicator.ref}>
+            <span
+              className={`slide-indicator kind-indicator ${kindIndicator.ready ? 'ready' : ''}`}
+              style={kindIndicator.style}
+              aria-hidden
+            />
+            {kinds.map((k) => {
+              const Icon = KIND_ICON[k];
+              return (
+                <button
+                  key={k}
+                  data-active={kind === k}
+                  className={`kind-tab ${kind === k ? 'active' : ''}`}
+                  onClick={() => {
+                    setKind(k);
+                    setTab('browse');
+                  }}
+                >
+                  <Icon size={15} /> {KIND_LABEL[k]}
+                </button>
+              );
+            })}
           </div>
         )}
 
         {kind === 'mod' && instance.loader === 'vanilla' && (
-          <div className="error" style={{ background: '#2a2418', color: 'var(--warning)', borderColor: '#4a3a1f' }}>
+          <div className="notice notice-warning">
+            <TriangleAlert size={16} />
             Ta instancja jest na „vanilla" — mody wymagają Fabric/Forge/NeoForge, więc się nie wczytają.
           </div>
         )}
@@ -277,7 +307,7 @@ export function ContentManagerModal({
             Zainstalowane ({installed.length})
           </button>
           <button className="ghost" onClick={addFromPc} title="Dodaj pliki z dysku do tej instancji">
-            📂 Dodaj z komputera
+            <FolderOpen size={16} /> Dodaj z komputera
           </button>
           {tab === 'browse' && (
             <div className="mod-source-right">
@@ -292,12 +322,12 @@ export function ContentManagerModal({
           <div className="browse-layout">
             <div className="browse-main">
               <div className="browse-searchbar">
-                <input
+                <SearchField
                   autoFocus
                   className="browse-search"
                   placeholder={SEARCH_PLACEHOLDER[kind]}
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={setQuery}
                 />
                 <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
                   <option value="relevance">Trafność</option>
@@ -306,52 +336,50 @@ export function ContentManagerModal({
                 </select>
               </div>
               <div className="mod-list">
-              {loading && <div className="mod-empty">Szukam…</div>}
-              {!loading && results.length === 0 && !error && (
-                <div className="mod-empty">Brak wyników.</div>
-              )}
-              {!loading &&
-                results.map((r) => {
-                  const already = installedProjectIds.has(r.projectId);
-                  return (
-                    <div className="mod-row" key={`${r.provider}:${r.projectId}`}>
-                      {r.iconUrl ? (
-                        <img className="mod-icon" src={r.iconUrl} alt="" loading="lazy" />
-                      ) : (
-                        <div className="mod-icon placeholder">{KIND_ICON[kind]}</div>
-                      )}
-                      <div className="mod-info">
-                        <div className="mod-title">{r.title}</div>
-                        <div className="mod-desc">{r.description}</div>
-                        <div className="mod-sub">
-                          <span className={`src-badge ${r.provider}`}>
-                            {r.provider === 'curseforge' ? 'CurseForge' : 'Modrinth'}
-                          </span>
-                          {r.author} · ⬇ {formatDownloads(r.downloads)}
-                        </div>
-                        {r.categories.length > 0 && (
-                          <div className="mod-cats">
-                            {r.categories.slice(0, 4).map((c) => (
-                              <span className="mod-cat" key={c}>
-                                {c}
-                              </span>
-                            ))}
-                          </div>
+                {loading && <div className="mod-empty">Szukam…</div>}
+                {!loading && results.length === 0 && !error && <div className="mod-empty">Brak wyników.</div>}
+                {!loading &&
+                  results.map((r) => {
+                    const already = installedProjectIds.has(r.projectId);
+                    return (
+                      <div className="mod-row" key={`${r.provider}:${r.projectId}`}>
+                        {r.iconUrl ? (
+                          <img className="mod-icon" src={r.iconUrl} alt="" loading="lazy" />
+                        ) : (
+                          <KindPlaceholder kind={kind} />
                         )}
+                        <div className="mod-info">
+                          <div className="mod-title">{r.title}</div>
+                          <div className="mod-desc">{r.description}</div>
+                          <div className="mod-sub">
+                            <span className={`src-badge ${r.provider}`}>
+                              {r.provider === 'curseforge' ? 'CurseForge' : 'Modrinth'}
+                            </span>
+                            {r.author} · <Download size={11} /> {formatDownloads(r.downloads)}
+                          </div>
+                          {r.categories.length > 0 && (
+                            <div className="mod-cats">
+                              {r.categories.slice(0, 4).map((c) => (
+                                <span className="mod-cat" key={c}>
+                                  {c}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          className="ghost"
+                          title="Otwórz stronę w przeglądarce"
+                          onClick={() => openExternal(projectUrl(r.provider, r.projectId, r.slug))}
+                        >
+                          <ExternalLink size={15} /> Strona
+                        </button>
+                        <button className="primary" disabled={already} onClick={() => setPickerFor(r)}>
+                          {already ? 'Zainstalowany' : 'Instaluj…'}
+                        </button>
                       </div>
-                      <button
-                        className="ghost"
-                        title="Otwórz stronę w przeglądarce"
-                        onClick={() => window.open(projectUrl(r.provider, r.projectId, r.slug), '_blank')}
-                      >
-                        🔗 Strona
-                      </button>
-                      <button className="primary" disabled={already} onClick={() => setPickerFor(r)}>
-                        {already ? 'Zainstalowany' : 'Instaluj…'}
-                      </button>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
               <div className="pager">
                 <button
@@ -359,7 +387,7 @@ export function ContentManagerModal({
                   disabled={page === 0 || loading}
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                 >
-                  ← Poprzednia
+                  <ChevronLeft size={16} /> Poprzednia
                 </button>
                 <span className="pager-info">Strona {page + 1}</span>
                 <button
@@ -367,7 +395,7 @@ export function ContentManagerModal({
                   disabled={results.length < PAGE_SIZE || loading}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Następna →
+                  Następna <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -378,16 +406,16 @@ export function ContentManagerModal({
                   className={`cat-item ${category === '' ? 'active' : ''}`}
                   onClick={() => setCategory('')}
                 >
-                  🗂️ Wszystkie
+                  <LayoutGrid className="cat-item-ic" /> Wszystkie
                 </button>
-                {MOD_CATEGORIES.map((c) => (
+                {MOD_CATEGORIES.map(({ key, label, icon: Icon }) => (
                   <button
-                    key={c.key}
-                    className={`cat-item ${category === c.key ? 'active' : ''}`}
-                    onClick={() => setCategory(category === c.key ? '' : c.key)}
+                    key={key}
+                    className={`cat-item ${category === key ? 'active' : ''}`}
+                    onClick={() => setCategory(category === key ? '' : key)}
                   >
-                    <span className="cat-item-ic">{c.icon}</span>
-                    {c.label}
+                    <Icon className="cat-item-ic" />
+                    {label}
                   </button>
                 ))}
               </aside>
@@ -396,18 +424,19 @@ export function ContentManagerModal({
         ) : (
           <div className="installed-wrap">
             <div className="installed-toolbar">
-              <input
+              <SearchField
                 className="instances-search"
-                placeholder="🔎 Szukaj w zainstalowanych…"
+                placeholder="Szukaj w zainstalowanych…"
                 value={installedQuery}
-                onChange={(e) => setInstalledQuery(e.target.value)}
+                onChange={setInstalledQuery}
               />
               <button className="ghost" onClick={checkForUpdates} disabled={checking || installed.length === 0}>
-                {checking ? 'Sprawdzam…' : '🔄 Sprawdź aktualizacje'}
+                <RefreshCw size={15} className={checking ? 'spin' : ''} />
+                {checking ? 'Sprawdzam…' : 'Sprawdź aktualizacje'}
               </button>
               {updates.length > 0 && (
                 <button className="primary" onClick={applyAllUpdates} disabled={!!busyFile}>
-                  ⬆ Zaktualizuj wszystkie ({updates.length})
+                  <CircleArrowUp size={16} /> Zaktualizuj wszystkie ({updates.length})
                 </button>
               )}
             </div>
@@ -424,7 +453,7 @@ export function ContentManagerModal({
                       {m.iconUrl ? (
                         <img className="mod-icon" src={m.iconUrl} alt="" loading="lazy" />
                       ) : (
-                        <div className="mod-icon placeholder">{KIND_ICON[kind]}</div>
+                        <KindPlaceholder kind={kind} />
                       )}
                       <span className={`mod-state-dot ${m.enabled ? 'on' : 'off'}`} />
                     </div>
@@ -434,7 +463,9 @@ export function ContentManagerModal({
                         {m.fileName} {m.size ? '· ' + formatSize(m.size) : ''}
                       </div>
                       {upd && (
-                        <div className="mod-update-note">⬆ Dostępna nowa wersja: {upd.newFile.displayName}</div>
+                        <div className="mod-update-note">
+                          <CircleArrowUp size={13} /> Dostępna nowa wersja: {upd.newFile.displayName}
+                        </div>
                       )}
                     </div>
                     {upd && (
@@ -444,18 +475,18 @@ export function ContentManagerModal({
                     )}
                     {m.provider && m.projectId && (
                       <button
-                        className="ghost"
+                        className="ghost icon-btn"
                         title="Otwórz stronę w przeglądarce"
-                        onClick={() => window.open(projectUrl(m.provider!, m.projectId!), '_blank')}
+                        onClick={() => openExternal(projectUrl(m.provider!, m.projectId!))}
                       >
-                        🔗
+                        <ExternalLink size={16} />
                       </button>
                     )}
                     <button onClick={() => handleToggle(m)} title={m.enabled ? 'Wyłącz' : 'Włącz'}>
                       {m.enabled ? 'Wyłącz' : 'Włącz'}
                     </button>
-                    <button className="danger" onClick={() => handleDelete(m)} title="Usuń">
-                      🗑
+                    <button className="danger icon-btn" onClick={() => handleDelete(m)} title="Usuń">
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 );

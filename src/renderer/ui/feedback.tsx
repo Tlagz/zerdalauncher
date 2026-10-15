@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createPortal } from 'react-dom';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { transition } from './viewTransition';
+import { Info, CircleCheck, TriangleAlert, Trash2, type LucideIcon } from 'lucide-react';
 import { useBackdropClose } from '../hooks/useBackdropClose';
 
 export type Tone = 'info' | 'success' | 'error';
@@ -11,13 +13,11 @@ export interface ConfirmOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
-  icon?: string;
 }
 export interface AlertOptions {
   title?: string;
   message: string;
   confirmLabel?: string;
-  icon?: string;
   tone?: Tone;
 }
 
@@ -31,7 +31,11 @@ interface ToastItem {
   id: number;
   message: string;
   tone: Tone;
+  /** Playing its exit animation; removed from the list once it finishes. */
+  leaving?: boolean;
 }
+
+const TOAST_EXIT_MS = 240;
 
 interface FeedbackState {
   queue: DialogItem[];
@@ -58,7 +62,11 @@ const useFeedback = create<FeedbackState>((set, get) => ({
     set((s) => ({ toasts: [...s.toasts, { id, message, tone }] }));
     setTimeout(() => get().removeToast(id), tone === 'error' ? 6500 : 4200);
   },
-  removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
+  removeToast: (id) => {
+    if (!get().toasts.some((t) => t.id === id && !t.leaving)) return;
+    set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t)) }));
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), TOAST_EXIT_MS);
+  }
 }));
 
 /** Ask the user to confirm an action. Resolves true on confirm, false otherwise. */
@@ -81,7 +89,7 @@ export function showToast(message: string, tone: Tone = 'success'): void {
   useFeedback.getState().addToast(message, tone);
 }
 
-const TONE_ICON: Record<Tone, string> = { info: 'ℹ️', success: '✅', error: '⚠️' };
+const TONE_ICON: Record<Tone, LucideIcon> = { info: Info, success: CircleCheck, error: TriangleAlert };
 
 function defaultTitle(item: DialogItem): string {
   const { kind, options } = item;
@@ -89,12 +97,21 @@ function defaultTitle(item: DialogItem): string {
   return options.tone === 'error' ? 'Coś poszło nie tak' : options.tone === 'success' ? 'Gotowe' : 'Informacja';
 }
 
-function DialogView({ item, onRespond }: { item: DialogItem; onRespond: (v: boolean) => void }) {
+function DialogView({
+  item,
+  onRespond,
+  onDismiss
+}: {
+  item: DialogItem;
+  onRespond: (v: boolean) => void;
+  /** Raw cancel for the backdrop — useBackdropClose already animates it. */
+  onDismiss: () => void;
+}) {
   const { kind, options } = item;
   const isConfirm = kind === 'confirm';
   const tone: Tone = options.danger ? 'error' : options.tone ?? (isConfirm ? 'info' : 'info');
-  const icon = options.icon ?? (options.danger ? '🗑️' : TONE_ICON[tone]);
-  const backdrop = useBackdropClose(() => onRespond(false));
+  const Icon = options.danger ? Trash2 : TONE_ICON[tone];
+  const backdrop = useBackdropClose(onDismiss);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -111,7 +128,9 @@ function DialogView({ item, onRespond }: { item: DialogItem; onRespond: (v: bool
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`dialog-icon tone-${tone}`}>{icon}</div>
+        <div className={`dialog-icon tone-${tone}`}>
+          <Icon size={24} />
+        </div>
         <h3 className="dialog-title">{options.title ?? defaultTitle(item)}</h3>
         <p className="dialog-message">{options.message}</p>
         <div className="dialog-actions">
@@ -140,37 +159,46 @@ export function FeedbackHost() {
   const resolveTop = useFeedback((s) => s.resolveTop);
   const removeToast = useFeedback((s) => s.removeToast);
 
+  // Animated close: the dialog zooms out instead of vanishing.
+  const respond = useCallback(
+    (v: boolean) => transition(() => resolveTop(v), { kind: 'close', closing: document.querySelector('.dialog') }),
+    [resolveTop]
+  );
+
   useEffect(() => {
     if (!top) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        resolveTop(false);
+        respond(false);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        resolveTop(true);
+        respond(true);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [top, resolveTop]);
+  }, [top, respond]);
 
   return createPortal(
     <>
-      {top && <DialogView key={top.id} item={top} onRespond={resolveTop} />}
+      {top && <DialogView key={top.id} item={top} onRespond={respond} onDismiss={() => resolveTop(false)} />}
       {toasts.length > 0 && (
         <div className="toast-stack">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`toast tone-${t.tone}`}
-              role="status"
-              onClick={() => removeToast(t.id)}
-            >
-              <span className="toast-ic">{TONE_ICON[t.tone]}</span>
-              <span className="toast-msg">{t.message}</span>
-            </div>
-          ))}
+          {toasts.map((t) => {
+            const ToastIcon = TONE_ICON[t.tone];
+            return (
+              <div
+                key={t.id}
+                className={`toast tone-${t.tone} ${t.leaving ? 'leaving' : ''}`}
+                role="status"
+                onClick={() => removeToast(t.id)}
+              >
+                <ToastIcon size={18} className="toast-ic" />
+                <span className="toast-msg">{t.message}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </>,

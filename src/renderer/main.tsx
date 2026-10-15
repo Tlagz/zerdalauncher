@@ -1,6 +1,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { installPointerFx } from './ui/pointerFx';
+
+installPointerFx();
 
 // Prevent the whole app from navigating to a file when something is dropped
 // outside a designated drop zone (instance cards handle their own drops).
