@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Play, Loader2, Clock, CalendarDays, Earth, Globe, Palette, MousePointer2, ArrowRight } from 'lucide-react';
+import { Clock, CalendarDays, Earth, Globe, Palette, MousePointer2, ArrowRight } from 'lucide-react';
+import { LaunchButton } from './LaunchButton';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
@@ -14,7 +15,7 @@ const RECENT_LIMIT = 2;
 const WORLDS_PER_CARD = 3;
 
 function RecentInstanceRow({ instance }: { instance: Instance }) {
-  const { isLaunching, launch } = useLaunch(instance);
+  const { isLaunching, isRunning, launch, stop } = useLaunch(instance);
   const [worlds, setWorlds] = useState<WorldInfo[]>([]);
 
   useEffect(() => {
@@ -67,7 +68,7 @@ function RecentInstanceRow({ instance }: { instance: Instance }) {
                 key={w.name}
                 className="home-quickplay-chip"
                 title="Uruchom prosto w tym świecie"
-                disabled={isLaunching}
+                disabled={isLaunching || isRunning}
                 onClick={() => play(w.name)}
               >
                 <Earth size={13} /> <span className="truncate">{w.name}</span>
@@ -77,7 +78,7 @@ function RecentInstanceRow({ instance }: { instance: Instance }) {
               <button
                 className="home-quickplay-chip"
                 title="Uruchom i dołącz do serwera"
-                disabled={isLaunching}
+                disabled={isLaunching || isRunning}
                 onClick={() => play()}
               >
                 <Globe size={13} /> <span className="truncate">{instance.serverAddress}</span>
@@ -86,17 +87,13 @@ function RecentInstanceRow({ instance }: { instance: Instance }) {
           </div>
         </div>
       )}
-      <button className="primary home-play" disabled={isLaunching} onClick={() => play()}>
-        {isLaunching ? (
-          <>
-            <Loader2 size={16} className="spin" /> Uruchamianie…
-          </>
-        ) : (
-          <>
-            <Play size={16} fill="currentColor" /> Graj
-          </>
-        )}
-      </button>
+      <LaunchButton
+        className="home-play"
+        isLaunching={isLaunching}
+        isRunning={isRunning}
+        onPlay={() => play()}
+        onStop={stop}
+      />
     </div>
   );
 }

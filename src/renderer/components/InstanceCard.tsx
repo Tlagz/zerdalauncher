@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Play, Star, ChevronRight, Clock, Gamepad2, Globe, Download, Loader2 } from 'lucide-react';
+import { Star, ChevronRight, Clock, Gamepad2, Globe, Download } from 'lucide-react';
+import { LaunchButton } from './LaunchButton';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
@@ -18,7 +19,7 @@ export function InstanceCard({
   morph?: boolean;
 }) {
   const { refreshInstances } = useStore();
-  const { isLaunching, launch } = useLaunch(instance);
+  const { isLaunching, isRunning, launch, stop } = useLaunch(instance);
   const [dragOver, setDragOver] = useState(false);
   const playtime = formatPlaytime(instance.playtimeMs);
 
@@ -114,24 +115,7 @@ export function InstanceCard({
         </div>
       )}
       <div className="card-actions">
-        <button
-          className="primary"
-          onClick={(e) => {
-            e.stopPropagation();
-            launch();
-          }}
-          disabled={isLaunching}
-        >
-          {isLaunching ? (
-            <>
-              <Loader2 size={16} className="spin" /> Uruchamianie…
-            </>
-          ) : (
-            <>
-              <Play size={16} fill="currentColor" /> Graj
-            </>
-          )}
-        </button>
+        <LaunchButton isLaunching={isLaunching} isRunning={isRunning} onPlay={() => launch()} onStop={stop} />
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ import { resolveJava } from '../minecraft/jre';
 import { fabricLoaders } from '../modloaders/fabric';
 import { forgeVersionsFor, installForgeServer } from '../modloaders/forge';
 import { neoforgeVersionsFor, installNeoForgeServer } from '../modloaders/neoforge';
-import { stopTunnel } from './tunnel';
+import { releaseServerTunnel } from './tunnel';
 import type {
   AppSettings,
   Instance,
@@ -313,7 +313,7 @@ export function setProps(id: string, patch: Record<string, string>): void {
 
 export function deleteServer(id: string): void {
   stopServer(id);
-  stopTunnel(id);
+  releaseServerTunnel(id);
   const c = running.get(id);
   if (c) {
     try {

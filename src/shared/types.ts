@@ -20,6 +20,8 @@ export interface Instance {
   serverAddress?: string;
   /** Pinned instances sort to the top of the list. */
   pinned?: boolean;
+  /** Folder name under instances/ (human-readable; older instances used the id). */
+  dir?: string;
 }
 
 export interface Account {
@@ -72,6 +74,15 @@ export interface LoaderVersionInfo {
   unstable: string[];
 }
 
+/** Where heavy game data (instances, libraries, assets…) is stored. */
+export interface DataLocationInfo {
+  current: string;
+  isDefault: boolean;
+  defaultDir: string;
+  /** A custom location that's no longer reachable (e.g. unplugged drive); the default is in use. */
+  unavailable?: string;
+}
+
 /** Status of a Mojang-provided Java runtime component (manual downloader in Settings). */
 export interface JreStatus {
   component: string;
@@ -110,9 +121,13 @@ export interface ServerStatus {
 
 export interface TunnelStatus {
   id: string;
-  state: 'stopped' | 'starting' | 'active' | 'error';
+  /** 'claim' = waiting for the user to link playit.gg in the browser (one-time). */
+  state: 'stopped' | 'starting' | 'claim' | 'active' | 'error';
   address?: string;
   message?: string;
+  /** How the server is reachable: direct port forward via the router, or the playit.gg relay. */
+  method?: 'upnp' | 'playit';
+  claimUrl?: string;
 }
 
 export interface DownloadProgress {

@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { ensureDirs } from './utils/paths';
+import { migrateInstanceFolders } from './minecraft/instances';
 import { registerIpc } from './ipc';
 import { importPackFile } from './mods/modpacks';
 import { initUpdater, checkForUpdates } from './updater';
@@ -102,6 +103,7 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     ensureDirs();
+    migrateInstanceFolders();
     initUpdater(() => mainWindow);
     void initDiscord();
     registerIpc(() => mainWindow);

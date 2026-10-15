@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { alertDialog } from '../ui/feedback';
+import { alertDialog, confirmDialog } from '../ui/feedback';
 import type { Instance } from '../../shared/types';
 
-/** Shared launch state/handler so the card and the detail view stay in sync. */
+/** Shared launch/stop state so the card, detail view and Home stay in sync. */
 export function useLaunch(instance: Instance) {
   const { refreshInstances, launchStatus } = useStore();
+  const isRunning = useStore((s) => s.runningGames.includes(instance.id));
   const [busy, setBusy] = useState(false);
 
   const isLaunching =
-    busy ||
-    (launchStatus?.instanceId === instance.id &&
-      ['preparing', 'downloading', 'launching'].includes(launchStatus.state));
+    !isRunning &&
+    (busy ||
+      (launchStatus?.instanceId === instance.id &&
+        ['preparing', 'downloading', 'launching'].includes(launchStatus.state)));
 
   const launch = async (world?: string) => {
     setBusy(true);
@@ -25,5 +27,15 @@ export function useLaunch(instance: Instance) {
     }
   };
 
-  return { isLaunching, launch };
+  const stop = async () => {
+    const ok = await confirmDialog({
+      title: 'Zatrzymać grę?',
+      message: `Proces „${instance.name}" zostanie zabity. Niezapisany postęp w grze może przepaść.`,
+      danger: true,
+      confirmLabel: 'Zatrzymaj grę'
+    });
+    if (ok) await window.api.mc.kill(instance.id);
+  };
+
+  return { isLaunching, isRunning, launch, stop };
 }

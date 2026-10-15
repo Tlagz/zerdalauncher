@@ -1,5 +1,6 @@
-import { Loader2, CircleCheck, CircleAlert } from 'lucide-react';
+import { Loader2, CircleCheck, CircleAlert, Square } from 'lucide-react';
 import { useStore } from '../store';
+import { confirmDialog } from '../ui/feedback';
 
 const STATE_LABEL: Record<string, string> = {
   preparing: 'Przygotowanie',
@@ -10,7 +11,7 @@ const STATE_LABEL: Record<string, string> = {
 };
 
 export function StatusBar() {
-  const { launchProgress, launchStatus } = useStore();
+  const { launchProgress, launchStatus, runningGames, instances } = useStore();
 
   if (!launchStatus || launchStatus.state === 'stopped') return null;
   const pct =
@@ -34,7 +35,26 @@ export function StatusBar() {
           </div>
         </>
       )}
-      {launchStatus.message && <span className="status-msg">{launchStatus.message}</span>}
+      {launchStatus.message && launchStatus.message !== STATE_LABEL[launchStatus.state] && (
+        <span className="status-msg">{launchStatus.message}</span>
+      )}
+      {launchStatus.state === 'running' && runningGames.includes(launchStatus.instanceId) && (
+        <button
+          className="danger btn-sm status-stop"
+          onClick={async () => {
+            const name = instances.find((i) => i.id === launchStatus.instanceId)?.name ?? 'gry';
+            const ok = await confirmDialog({
+              title: 'Zatrzymać grę?',
+              message: `Proces „${name}" zostanie zabity. Niezapisany postęp w grze może przepaść.`,
+              danger: true,
+              confirmLabel: 'Zatrzymaj grę'
+            });
+            if (ok) await window.api.mc.kill(launchStatus.instanceId);
+          }}
+        >
+          <Square size={12} fill="currentColor" /> Zatrzymaj
+        </button>
+      )}
     </div>
   );
 }

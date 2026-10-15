@@ -22,6 +22,8 @@ interface UiState {
 
   launchProgress: DownloadProgress | null;
   launchStatus: LaunchStatus | null;
+  /** Instance ids whose game process is currently running. */
+  runningGames: string[];
 
   /** Game console output per instance id (capped buffer). */
   logs: Record<string, string>;
@@ -57,6 +59,7 @@ export const useStore = create<UiState>((set) => ({
   settings: null,
   launchProgress: null,
   launchStatus: null,
+  runningGames: [],
   logs: {},
   clearLogs: (instanceId) =>
     set((s) => ({ logs: { ...s.logs, [instanceId]: '' } })),
@@ -83,6 +86,8 @@ export const useStore = create<UiState>((set) => ({
 
 window.api.mc.onProgress((p) => useStore.setState({ launchProgress: p }));
 window.api.mc.onStatus((s) => useStore.setState({ launchStatus: s }));
+window.api.mc.onRunning((ids) => useStore.setState({ runningGames: ids }));
+window.api.mc.runningList().then((ids) => useStore.setState({ runningGames: ids }));
 window.api.mc.onLog(({ instanceId, line }) =>
   useStore.setState((s) => {
     const next = ((s.logs[instanceId] ?? '') + line).slice(-LOG_CAP);

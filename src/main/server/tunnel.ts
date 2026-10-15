@@ -1,106 +1,113 @@
-import fs from 'fs';
-import path from 'path';
-import { spawn, ChildProcess } from 'child_process';
-import AdmZip from 'adm-zip';
-import { paths } from '../utils/paths';
-import { downloadFile } from '../utils/http';
 import type { TunnelStatus } from '../../shared/types';
+import { openPort, closePort } from './upnp';
+import {
+  ensureSecret,
+  ensureTunnel,
+  tunnelAddress,
+  startAgent,
+  stopAgent,
+  deleteTunnel,
+  forgetSecret,
+  PlayitAuthError
+} from './playit';
 
-// bore (github.com/ekzhang/bore) — a tiny TCP tunnel, no account needed.
-const BORE_VERSION = 'v0.6.0';
-const tunnels = new Map<string, ChildProcess>();
+/**
+ * Making a local server reachable for friends:
+ *  1. UPnP — ask the router to forward the port. Direct connection, no extra ping.
+ *  2. playit.gg — relay with European nodes, for routers without UPnP or ISPs
+ *     using CGNAT. Needs a one-time account link in the browser.
+ */
+type Share = { method: 'upnp'; port: number } | { method: 'playit' };
+
+const shares = new Map<string, Share>();
+/** Starts in progress; deleting the entry cancels the start at its next step. */
+const starting = new Map<string, symbol>();
 
 let emitTunnel: (s: TunnelStatus) => void = () => {};
 export function initTunnel(cb: (s: TunnelStatus) => void): void {
   emitTunnel = cb;
 }
 
-function boreAssetName(): string {
-  const arch = process.arch === 'ia32' ? 'i686' : 'x86_64';
-  return `bore-${BORE_VERSION}-${arch}-pc-windows-msvc.zip`;
-}
+class Cancelled extends Error {}
 
-/** Download + cache the bore.exe agent on first use, return its path. */
-async function ensureBore(): Promise<string> {
-  const binDir = path.join(paths.cache, 'bin');
-  const exe = path.join(binDir, 'bore.exe');
-  if (fs.existsSync(exe)) return exe;
-  fs.mkdirSync(binDir, { recursive: true });
-  const asset = boreAssetName();
-  const zipPath = path.join(paths.cache, asset);
-  await downloadFile(`https://github.com/ekzhang/bore/releases/download/${BORE_VERSION}/${asset}`, zipPath);
-  const entry = new AdmZip(zipPath).getEntries().find((e) => /bore\.exe$/i.test(e.entryName));
-  if (!entry) throw new Error('Nie znaleziono bore.exe w pobranym archiwum.');
-  fs.writeFileSync(exe, entry.getData());
-  return exe;
-}
+export async function startTunnel(serverId: string, port: number, serverName: string): Promise<void> {
+  if (shares.has(serverId) || starting.has(serverId)) return;
+  const token = Symbol(serverId);
+  starting.set(serverId, token);
+  const alive = () => {
+    if (starting.get(serverId) !== token) throw new Cancelled();
+  };
 
-export function isTunnelActive(serverId: string): boolean {
-  return tunnels.has(serverId);
-}
-
-/** Open a public TCP tunnel (bore.pub) to the given local port. */
-export async function startTunnel(serverId: string, port: number): Promise<void> {
-  if (tunnels.has(serverId)) return;
-  emitTunnel({ id: serverId, state: 'starting', message: 'Uruchamiam tunel…' });
-
-  let exe: string;
   try {
-    exe = await ensureBore();
+    emitTunnel({ id: serverId, state: 'starting', message: 'Otwieram port na routerze (UPnP)…' });
+    let upnpError: string;
+    try {
+      const address = await openPort(port);
+      alive();
+      shares.set(serverId, { method: 'upnp', port });
+      emitTunnel({ id: serverId, state: 'active', method: 'upnp', address });
+      return;
+    } catch (e) {
+      if (e instanceof Cancelled) throw e;
+      upnpError = (e as Error).message;
+    }
+
+    alive();
+    emitTunnel({ id: serverId, state: 'starting', message: `${upnpError} Łączę z playit.gg…` });
+    const viaPlayit = async (): Promise<string> => {
+      const secret = await ensureSecret((claimUrl) => {
+        alive();
+        emitTunnel({
+          id: serverId,
+          state: 'claim',
+          claimUrl,
+          message: 'Zaloguj się na playit.gg w przeglądarce i zaakceptuj launcher (tylko za pierwszym razem).'
+        });
+      });
+      alive();
+      emitTunnel({ id: serverId, state: 'starting', message: 'Tworzę tunel playit.gg…' });
+      const tunnelId = await ensureTunnel(secret, serverId, serverName, port);
+      await startAgent(secret);
+      return tunnelAddress(secret, tunnelId);
+    };
+    let address: string;
+    try {
+      address = await viaPlayit();
+    } catch (e) {
+      if (!(e instanceof PlayitAuthError)) throw e;
+      // Saved secret no longer valid — link the launcher again, once.
+      stopAgent();
+      forgetSecret();
+      alive();
+      address = await viaPlayit();
+    }
+    alive();
+    shares.set(serverId, { method: 'playit' });
+    emitTunnel({ id: serverId, state: 'active', method: 'playit', address });
   } catch (e) {
+    if (e instanceof Cancelled) return;
     emitTunnel({ id: serverId, state: 'error', message: (e as Error).message });
     throw e;
+  } finally {
+    if (starting.get(serverId) === token) starting.delete(serverId);
   }
-
-  const child = spawn(exe, ['local', String(port), '--to', 'bore.pub'], {
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  tunnels.set(serverId, child);
-
-  let resolved = false;
-  const onData = (b: Buffer) => {
-    const s = b.toString();
-    const m =
-      s.match(/remote_port[=:\s]+(\d+)/i) ||
-      s.match(/bore\.pub:(\d+)/i) ||
-      s.match(/listening at \S*?:(\d+)/i);
-    if (m && !resolved) {
-      resolved = true;
-      emitTunnel({ id: serverId, state: 'active', address: `bore.pub:${m[1]}` });
-    }
-  };
-  child.stdout?.on('data', onData);
-  child.stderr?.on('data', onData);
-  child.on('exit', () => {
-    tunnels.delete(serverId);
-    emitTunnel({ id: serverId, state: 'stopped' });
-  });
-  child.on('error', (e) => {
-    tunnels.delete(serverId);
-    emitTunnel({ id: serverId, state: 'error', message: e.message });
-  });
 }
 
 export function stopTunnel(serverId: string): void {
-  const c = tunnels.get(serverId);
-  if (c) {
-    try {
-      c.kill();
-    } catch {
-      /* ignore */
-    }
-    tunnels.delete(serverId);
-  }
+  starting.delete(serverId);
+  const share = shares.get(serverId);
+  shares.delete(serverId);
+  if (share?.method === 'upnp') void closePort(share.port).catch(() => {});
+  if (![...shares.values()].some((s) => s.method === 'playit')) stopAgent();
   emitTunnel({ id: serverId, state: 'stopped' });
 }
 
+/** Server deleted: stop sharing and drop its playit tunnel too. */
+export function releaseServerTunnel(serverId: string): void {
+  stopTunnel(serverId);
+  void deleteTunnel(serverId).catch(() => {});
+}
+
 export function stopAllTunnels(): void {
-  for (const c of tunnels.values()) {
-    try {
-      c.kill();
-    } catch {
-      /* ignore */
-    }
-  }
-  tunnels.clear();
+  for (const id of [...shares.keys(), ...starting.keys()]) stopTunnel(id);
 }

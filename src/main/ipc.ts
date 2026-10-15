@@ -1,4 +1,5 @@
 import { ipcMain, shell, dialog, BrowserWindow, nativeImage, app } from 'electron';
+import type { ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { IPC } from '../shared/ipc-channels';
@@ -59,6 +60,7 @@ import {
   resetSkin
 } from './auth/skins';
 import { paths, instanceDir, instanceGameDir } from './utils/paths';
+import { getDataLocation, resolveTarget, movableSize, moveData } from './utils/dataLocation';
 import { readJson, writeJson } from './utils/store';
 import { fetchAsDataUrl } from './utils/http';
 import { detectJava } from './utils/java';
@@ -74,7 +76,8 @@ import {
   sendCommand,
   addLocalMods as addServerMods,
   getProps,
-  setProps
+  setProps,
+  runningServerIds
 } from './server';
 import { initTunnel, startTunnel, stopTunnel } from './server/tunnel';
 import { serverDir } from './utils/paths';
@@ -97,6 +100,12 @@ function getSettings(): AppSettings {
 function emitToAll(channel: string, payload: unknown): void {
   for (const w of BrowserWindow.getAllWindows()) w.webContents.send(channel, payload);
 }
+
+// Game processes by instance id, plus instances still being prepared (downloads,
+// loader install) so a second "Graj" can't start the same instance twice.
+const games = new Map<string, ChildProcess>();
+const starting = new Set<string>();
+const emitRunning = () => emitToAll(IPC.mcRunning, [...games.keys()]);
 
 export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   // Instances
@@ -131,7 +140,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.serversTunnelStart, (_e, id: string) => {
     const srv = getServer(id);
     if (!srv) throw new Error('Brak serwera.');
-    return startTunnel(id, srv.port);
+    return startTunnel(id, srv.port, srv.name);
   });
   ipcMain.handle(IPC.serversTunnelStop, (_e, id: string) => stopTunnel(id));
 
@@ -373,10 +382,44 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   });
   ipcMain.handle(IPC.updateInstall, () => quitAndInstall());
 
+  // Running games
+  ipcMain.handle(IPC.mcRunningList, () => [...games.keys()]);
+  ipcMain.handle(IPC.mcKill, (_e, instanceId: string) => {
+    games.get(instanceId)?.kill();
+  });
+
+  // Game data location
+  const dataProgress = (done: number, total: number, message: string) =>
+    emitToAll(IPC.dataProgress, { done, total, message });
+  ipcMain.handle(IPC.dataLocation, () => getDataLocation());
+  ipcMain.handle(IPC.dataOpen, () => shell.openPath(paths.data));
+  ipcMain.handle(IPC.dataPick, async (_e, useDefault?: boolean) => {
+    let target = paths.root;
+    if (!useDefault) {
+      const win = getMainWindow() ?? undefined;
+      const res = await dialog.showOpenDialog(win!, {
+        title: 'Wybierz folder na dane launchera',
+        properties: ['openDirectory', 'createDirectory']
+      });
+      if (res.canceled || !res.filePaths[0]) return null;
+      target = resolveTarget(res.filePaths[0]);
+    }
+    return { target, bytes: movableSize(target) };
+  });
+  ipcMain.handle(IPC.dataMove, async (_e, target: string) => {
+    if (games.size || starting.size) throw new Error('Zamknij grę przed przeniesieniem danych.');
+    if (runningServerIds().length) throw new Error('Zatrzymaj serwery przed przeniesieniem danych.');
+    await moveData(target, dataProgress);
+    // Every path is resolved at startup, so restart onto the new location.
+    app.relaunch();
+    app.exit(0);
+  });
+
   // Launch
   ipcMain.handle(IPC.mcLaunch, async (_e, instanceId: string, opts?: { world?: string }) => {
     const instance = getInstance(instanceId);
     if (!instance) throw new Error('Brak instancji.');
+    if (games.has(instanceId) || starting.has(instanceId)) throw new Error('Ta instancja już działa.');
     const activeId = activeAccountId();
     const accounts = listAccounts();
     let acc = accounts.find((a) => a.id === activeId) ?? accounts[0];
@@ -394,6 +437,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
         message: msg
       } satisfies DownloadProgress);
 
+    starting.add(instanceId);
     try {
       status('preparing', 'Sprawdzam pliki');
       // Resolve the version id to actually launch. For modded instances this
@@ -409,13 +453,15 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
 
       status('launching', 'Uruchamiam Minecraft');
       const playStart = Date.now();
-      launchGame({
+      const child = launchGame({
         instance,
         account: acc,
         prepared,
         javaExe,
         quickPlayWorld: opts?.world,
         onExit: (code) => {
+          games.delete(instanceId);
+          emitRunning();
           // Accumulate playtime for stats, drop Discord presence back to idle.
           const inst = getInstance(instance.id);
           updateInstance(instance.id, {
@@ -430,6 +476,8 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
           emitToAll(IPC.mcLog, { instanceId, line });
         }
       });
+      games.set(instanceId, child);
+      emitRunning();
       updateInstance(instance.id, {
         lastPlayed: Date.now(),
         sessions: (instance.sessions ?? 0) + 1
@@ -439,6 +487,8 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     } catch (err) {
       status('error', (err as Error).message);
       throw err;
+    } finally {
+      starting.delete(instanceId);
     }
   });
 }

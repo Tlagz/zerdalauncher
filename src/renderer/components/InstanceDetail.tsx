@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import {
   ArrowLeft,
-  Play,
-  Loader2,
   Puzzle,
   Terminal,
   Earth,
@@ -18,6 +16,7 @@ import {
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
+import { LaunchButton } from './LaunchButton';
 import { ContentManagerModal } from './ContentManagerModal';
 import { ConsoleModal } from './ConsoleModal';
 import { EditInstanceModal } from './EditInstanceModal';
@@ -28,7 +27,7 @@ import type { Instance } from '../../shared/types';
 
 export function InstanceDetail({ instance, onBack }: { instance: Instance; onBack: () => void }) {
   const { refreshInstances } = useStore();
-  const { isLaunching, launch } = useLaunch(instance);
+  const { isLaunching, isRunning, launch, stop } = useLaunch(instance);
   const [showMods, setShowMods] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -108,17 +107,14 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
             <span className="tag">{instance.ramMb} MB</span>
           </div>
         </div>
-        <button className="primary detail-play" onClick={() => launch()} disabled={isLaunching}>
-          {isLaunching ? (
-            <>
-              <Loader2 size={18} className="spin" /> Uruchamianie…
-            </>
-          ) : (
-            <>
-              <Play size={18} fill="currentColor" /> Graj
-            </>
-          )}
-        </button>
+        <LaunchButton
+          className="detail-play"
+          iconSize={18}
+          isLaunching={isLaunching}
+          isRunning={isRunning}
+          onPlay={() => launch()}
+          onStop={stop}
+        />
       </div>
 
       <div className="detail-statgrid">

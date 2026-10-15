@@ -40,6 +40,16 @@ export const IPC = {
   mcLaunchProgress: 'mc:launchProgress',
   mcLaunchStatus: 'mc:launchStatus',
   mcLog: 'mc:log',
+  mcKill: 'mc:kill',
+  mcRunningList: 'mc:runningList',
+  mcRunning: 'mc:running',
+
+  // Game data location
+  dataLocation: 'data:location',
+  dataPick: 'data:pick',
+  dataMove: 'data:move',
+  dataProgress: 'data:progress',
+  dataOpen: 'data:open',
 
   // Modloaders
   fabricVersions: 'fabric:versions',

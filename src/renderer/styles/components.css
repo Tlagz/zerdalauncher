@@ -2175,3 +2175,29 @@
 
 /* empty-state welcome bobs gently */
 .empty h2 { animation: floatBob 4s ease-in-out infinite; }
+
+/* ---------- Data location (Settings) + status bar stop ---------- */
+.data-path {
+  display: block;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.status-stop {
+  flex: none;
+  margin-left: auto;
+}
+.tunnel-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tunnel-hint {
+  margin: -4px 0 12px;
+}

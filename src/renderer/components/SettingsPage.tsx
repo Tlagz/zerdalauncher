@@ -9,11 +9,17 @@ import {
   RefreshCw,
   Download,
   Trash2,
-  Loader2
+  Loader2,
+  HardDrive,
+  FolderInput,
+  FolderOpen,
+  RotateCcw,
+  TriangleAlert
 } from 'lucide-react';
 import { useStore } from '../store';
-import { alertDialog } from '../ui/feedback';
-import type { AppSettings, JreStatus } from '../../shared/types';
+import { alertDialog, confirmDialog } from '../ui/feedback';
+import { formatSize } from '../format';
+import type { AppSettings, DataLocationInfo, JreStatus } from '../../shared/types';
 
 function updateLabel(s: ReturnType<typeof useStore.getState>['updateStatus']): string {
   switch (s?.state) {
@@ -44,6 +50,40 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [runtimes, setRuntimes] = useState<JreStatus[]>([]);
+  const [dataLoc, setDataLoc] = useState<DataLocationInfo | null>(null);
+  const [moving, setMoving] = useState(false);
+  const [moveProgress, setMoveProgress] = useState<{ done: number; total: number; message: string } | null>(null);
+
+  useEffect(() => {
+    window.api.data.location().then(setDataLoc);
+    return window.api.data.onProgress(setMoveProgress);
+  }, []);
+
+  /** Pick a folder (or the default), confirm, then move — the launcher restarts on success. */
+  const relocate = async (useDefault: boolean) => {
+    const pick = await window.api.data.pick(useDefault);
+    if (!pick) return;
+    const ok = await confirmDialog({
+      title: 'Przenieść dane launchera?',
+      message:
+        `Instancje, biblioteki, assety, wersje gry i Javy (${formatSize(pick.bytes) || 'kilka MB'}) zostaną przeniesione do:
+${pick.target}
+
+` +
+        'Po zakończeniu launcher uruchomi się ponownie.',
+      confirmLabel: 'Przenieś'
+    });
+    if (!ok) return;
+    setMoving(true);
+    setMoveProgress(null);
+    try {
+      await window.api.data.move(pick.target);
+    } catch (e) {
+      setMoving(false);
+      setMoveProgress(null);
+      alertDialog({ title: 'Nie udało się przenieść danych', message: (e as Error).message, tone: 'error' });
+    }
+  };
   const [runtimeBusy, setRuntimeBusy] = useState<string | null>(null);
   const [runtimeProgress, setRuntimeProgress] = useState<{ current: number; total: number } | null>(
     null
@@ -222,6 +262,55 @@ export function SettingsPage() {
           />
           Zamknij launcher po uruchomieniu gry
         </label>
+      </div>
+
+      <div className="section">
+        <h3>
+          <HardDrive size={16} /> Lokalizacja danych
+        </h3>
+        {dataLoc?.unavailable && (
+          <div className="notice notice-warning">
+            <TriangleAlert size={16} />
+            Nie znaleziono folderu {dataLoc.unavailable} (odłączony dysk?) — używam domyślnej lokalizacji.
+          </div>
+        )}
+        <label>Instancje, biblioteki, assety, wersje gry i Javy</label>
+        <code className="data-path">{dataLoc?.current ?? '…'}</code>
+        <div className="data-actions">
+          <button onClick={() => window.api.data.open()}>
+            <FolderOpen size={15} /> Otwórz folder
+          </button>
+          <button className="primary" onClick={() => relocate(false)} disabled={moving}>
+            <FolderInput size={15} /> Zmień lokalizację…
+          </button>
+          {dataLoc && !dataLoc.isDefault && (
+            <button className="ghost" onClick={() => relocate(true)} disabled={moving}>
+              <RotateCcw size={15} /> Przywróć domyślną
+            </button>
+          )}
+        </div>
+        {moving && (
+          <div className="pack-progress">
+            <div className="pack-progress-msg">
+              {moveProgress ? `Przenoszę: ${moveProgress.message}` : 'Przenoszę dane…'}
+            </div>
+            <div className="pack-progress-bar">
+              <div
+                className="pack-progress-fill"
+                style={{ width: `${moveProgress?.total ? (moveProgress.done / moveProgress.total) * 100 : 100}%` }}
+              />
+            </div>
+            {moveProgress && (
+              <div className="pack-progress-count">
+                {formatSize(moveProgress.done)} / {formatSize(moveProgress.total)}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="field-hint">
+          Konta, ustawienia i listy instancji zostają w {dataLoc?.defaultDir}. Na tym samym dysku przeniesienie jest
+          natychmiastowe; na inny dysk pliki są kopiowane.
+        </div>
       </div>
 
       <div className="section">

@@ -21,7 +21,8 @@ import type {
   ServerStatus,
   TunnelStatus,
   JreStatus,
-  LoaderVersionInfo
+  LoaderVersionInfo,
+  DataLocationInfo
 } from '../shared/types';
 
 const api = {
@@ -114,6 +115,15 @@ const api = {
     }> => ipcRenderer.invoke(IPC.mcVersions),
     launch: (id: string, opts?: { world?: string }): Promise<void> =>
       ipcRenderer.invoke(IPC.mcLaunch, id, opts),
+    kill: (id: string): Promise<void> => ipcRenderer.invoke(IPC.mcKill, id),
+    runningList: (): Promise<string[]> => ipcRenderer.invoke(IPC.mcRunningList),
+    onRunning: (cb: (ids: string[]) => void): (() => void) => {
+      const fn = (_: unknown, ids: string[]) => cb(ids);
+      ipcRenderer.on(IPC.mcRunning, fn);
+      return () => {
+        ipcRenderer.off(IPC.mcRunning, fn);
+      };
+    },
     onProgress: (cb: (p: DownloadProgress) => void): (() => void) => {
       const fn = (_: unknown, p: DownloadProgress) => cb(p);
       ipcRenderer.on(IPC.mcLaunchProgress, fn);
@@ -261,6 +271,22 @@ const api = {
   system: {
     detectJava: (): Promise<string | null> => ipcRenderer.invoke(IPC.systemDetectJava),
     appVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appVersion)
+  },
+  data: {
+    location: (): Promise<DataLocationInfo> => ipcRenderer.invoke(IPC.dataLocation),
+    /** Folder picker (or the default location); returns the target and the size to move. */
+    pick: (useDefault = false): Promise<{ target: string; bytes: number } | null> =>
+      ipcRenderer.invoke(IPC.dataPick, useDefault),
+    /** Moves the data and restarts the launcher on success. */
+    move: (target: string): Promise<void> => ipcRenderer.invoke(IPC.dataMove, target),
+    open: (): Promise<string> => ipcRenderer.invoke(IPC.dataOpen),
+    onProgress: (cb: (p: { done: number; total: number; message: string }) => void): (() => void) => {
+      const fn = (_: unknown, p: { done: number; total: number; message: string }) => cb(p);
+      ipcRenderer.on(IPC.dataProgress, fn);
+      return () => {
+        ipcRenderer.off(IPC.dataProgress, fn);
+      };
+    }
   },
   java: {
     list: (): Promise<JreStatus[]> => ipcRenderer.invoke(IPC.javaList),

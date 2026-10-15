@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import path from 'path';
 import { paths, instanceGameDir } from '../utils/paths';
 import { evaluateRules, VersionData, ArgumentItem } from './manifest';
@@ -16,7 +16,7 @@ export interface LaunchOptions {
   quickPlayWorld?: string;
 }
 
-export function launchGame(opts: LaunchOptions): void {
+export function launchGame(opts: LaunchOptions): ChildProcess {
   const { instance, account, prepared, javaExe } = opts;
   if (!javaExe) throw new Error('Nie znaleziono instalacji Java.');
 
@@ -64,7 +64,9 @@ export function launchGame(opts: LaunchOptions): void {
   }
 
   const args = [...jvmArgs, mainClass, ...gameArgs];
-  opts.onLog?.(`[launch] ${javaExe} ${args.join(' ')}`);
+  // The log is shown in the console and copied into bug reports — never leak the session token.
+  const shown = args.map((a, i) => (args[i - 1] === '--accessToken' ? '<ukryty>' : a));
+  opts.onLog?.(`[launch] ${javaExe} ${shown.join(' ')}`);
 
   const child = spawn(javaExe, args, {
     cwd: gameDir,
@@ -74,7 +76,19 @@ export function launchGame(opts: LaunchOptions): void {
 
   child.stdout?.on('data', (b) => opts.onLog?.(b.toString()));
   child.stderr?.on('data', (b) => opts.onLog?.(b.toString()));
-  child.on('exit', (code) => opts.onExit(code));
+  let exited = false;
+  const finish = (code: number | null) => {
+    if (exited) return;
+    exited = true;
+    opts.onExit(code);
+  };
+  child.on('exit', finish);
+  child.on('error', (err) => {
+    opts.onLog?.(`[launch] Nie udało się uruchomić Javy: ${err.message}
+`);
+    finish(-1);
+  });
+  return child;
 }
 
 function resolveArgs(

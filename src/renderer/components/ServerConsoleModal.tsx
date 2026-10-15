@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Square, Copy, Check, Eraser, Globe, Share2, SendHorizontal } from 'lucide-react';
+import { Play, Square, Copy, Check, Eraser, Globe, Share2, SendHorizontal, Loader2, ExternalLink } from 'lucide-react';
+import { openExternal } from '../links';
 import { useStore } from '../store';
 import { useBackdropClose } from '../hooks/useBackdropClose';
 import { alertDialog } from '../ui/feedback';
@@ -21,7 +22,7 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
   const running = state === 'running' || state === 'starting';
 
   const tState = tunnel?.state ?? 'stopped';
-  const tunnelBusy = tState === 'starting';
+  const tunnelBusy = tState === 'starting' || tState === 'claim';
   const tunnelOn = tState === 'active';
 
   const copyAddress = () => {
@@ -92,20 +93,31 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
             <Globe size={16} className="tunnel-globe" />
             {tunnelOn ? (
               <>
-                <span className="tunnel-label">Publiczny adres:</span>
+                <span className="tunnel-label">
+                  {tunnel?.method === 'upnp' ? 'Adres (bezpośrednio, UPnP):' : 'Adres (przez playit.gg):'}
+                </span>
                 <code className="tunnel-addr">{tunnel?.address}</code>
               </>
-            ) : tunnelBusy ? (
-              <span className="tunnel-label">Tworzę tunel… (pierwszy raz pobieram bore)</span>
+            ) : tState === 'claim' ? (
+              <span className="tunnel-label">{tunnel?.message}</span>
+            ) : tState === 'starting' ? (
+              <span className="tunnel-label">
+                <Loader2 size={14} className="spin" /> {tunnel?.message ?? 'Uruchamiam udostępnianie…'}
+              </span>
             ) : tState === 'error' ? (
-              <span className="tunnel-label">Błąd tunelu: {tunnel?.message ?? 'nieznany'}</span>
+              <span className="tunnel-label">Nie udało się udostępnić: {tunnel?.message ?? 'nieznany błąd'}</span>
             ) : (
               <span className="tunnel-label">
-                Udostępnij serwer znajomym bez przekierowania portów (tunel bore).
+                Udostępnij serwer znajomym — launcher sam otworzy port na routerze, a gdy się nie da, użyje playit.gg.
               </span>
             )}
           </div>
           <div className="tunnel-actions">
+            {tState === 'claim' && tunnel?.claimUrl && (
+              <button className="primary" onClick={() => openExternal(tunnel.claimUrl!)}>
+                <ExternalLink size={15} /> Otwórz playit.gg
+              </button>
+            )}
             {tunnelOn && (
               <button className="ghost" onClick={copyAddress}>
                 {copied ? <Check size={15} /> : <Copy size={15} />}
@@ -114,18 +126,26 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
             )}
             {tunnelOn || tunnelBusy ? (
               <button className="danger" onClick={() => window.api.servers.stopTunnel(server.id)}>
-                Wyłącz tunel
+                {tunnelOn ? 'Przestań udostępniać' : 'Anuluj'}
               </button>
             ) : (
               <button
                 className="primary"
-                onClick={() => window.api.servers.startTunnel(server.id).catch((e) => alertDialog({ message: (e as Error).message, tone: 'error' }))}
+                // Failures are shown in the bar itself (status 'error').
+                onClick={() => window.api.servers.startTunnel(server.id).catch(() => {})}
               >
                 <Share2 size={15} /> Udostępnij
               </button>
             )}
           </div>
         </div>
+
+        {tunnelOn && tunnel?.method === 'upnp' && (
+          <div className="field-hint tunnel-hint">
+            Jeśli znajomi nie mogą wejść, zezwól Javie na połączenia w Zaporze Windows (okno pojawia się przy
+            pierwszym starcie serwera).
+          </div>
+        )}
 
         <pre ref={preRef} className="console-output" onScroll={onScroll}>
           {log || 'Serwer nie był jeszcze uruchamiany. Kliknij „Uruchom".'}
