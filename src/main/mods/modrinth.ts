@@ -1,4 +1,4 @@
-import { getJson } from '../utils/http';
+import { getJson, postJson } from '../utils/http';
 import type { ModSearchResult, ModFile, ModDependency } from '../../shared/types';
 
 const API = 'https://api.modrinth.com/v2';
@@ -150,6 +150,72 @@ export async function getVersionById(versionId: string): Promise<ModFile> {
 export async function getProjectIcon(projectId: string): Promise<string | null> {
   const p = await getJson<{ icon_url?: string }>(`${API}/project/${projectId}`, headers);
   return p.icon_url || null;
+}
+
+// ---------- hash lookups (identify files that weren't installed through the launcher) ----------
+
+/** The Modrinth version each file (by sha1) belongs to; unknown files are left out. */
+export async function versionsByHash(sha1s: string[]): Promise<Record<string, ModFile>> {
+  if (!sha1s.length) return {};
+  const res = await postJson<Record<string, ModrinthVersion>>(`${API}/version_files`, { hashes: sha1s, algorithm: 'sha1' }, headers);
+  return Object.fromEntries(Object.entries(res).map(([h, v]) => [h, toModFile(v)]));
+}
+
+/** Newest compatible version for each file (by sha1) in one request. */
+export async function latestByHash(sha1s: string[], loader: string, mcVersion: string): Promise<Record<string, ModFile>> {
+  if (!sha1s.length) return {};
+  const body: Record<string, unknown> = { hashes: sha1s, algorithm: 'sha1', game_versions: [mcVersion] };
+  const lf = loaderFacet(loader);
+  if (lf) body.loaders = [lf];
+  const res = await postJson<Record<string, ModrinthVersion>>(`${API}/version_files/update`, body, headers);
+  return Object.fromEntries(Object.entries(res).map(([h, v]) => [h, toModFile(v)]));
+}
+
+/** Titles and icons for many projects at once. */
+export async function projectsByIds(ids: string[]): Promise<Array<{ id: string; title: string; icon_url?: string }>> {
+  if (!ids.length) return [];
+  return getJson(`${API}/projects?ids=${encodeURIComponent(JSON.stringify(ids))}`, headers);
+}
+
+/** Mod ids whose Modrinth slug differs from the id the loader reports. */
+const SLUG_FOR_ID: Record<string, string> = {
+  fabric: 'fabric-api',
+  'fabric-api': 'fabric-api',
+  'fabric-api-base': 'fabric-api',
+  architectury: 'architectury-api',
+  cloth_config: 'cloth-config',
+  'cloth-config2': 'cloth-config',
+  kotlinforforge: 'kotlin-for-forge',
+  owo: 'owo-lib',
+  yet_another_config_lib_v3: 'yacl',
+  yet_another_config_lib: 'yacl',
+  geckolib3: 'geckolib',
+  playeranimator: 'playeranimator',
+  forgeconfigapiport: 'forge-config-api-port',
+  puzzleslib: 'puzzles-lib',
+  resourcefullib: 'resourceful-lib',
+  creativecore: 'creativecore',
+  bookshelf: 'bookshelf-lib',
+  curios: 'curios',
+  trinkets: 'trinkets',
+  jei: 'jei',
+  terrablender: 'terrablender'
+};
+
+/** Find the Modrinth project for a mod id reported by the loader (e.g. a missing dependency). */
+export async function projectForModId(modId: string, mcVersion: string, loader: string): Promise<string | null> {
+  const candidates = [SLUG_FOR_ID[modId], modId, modId.replace(/_/g, '-')].filter((c): c is string => !!c);
+  for (const slug of new Set(candidates)) {
+    try {
+      const p = await getJson<{ id: string; project_type: string }>(`${API}/project/${encodeURIComponent(slug)}`, headers);
+      if (p.project_type === 'mod') return p.id;
+    } catch {
+      /* no project with that slug */
+    }
+  }
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const hits = await search(modId, mcVersion, loader, 0, 5);
+  return hits.find((h) => norm(h.slug) === norm(modId) || norm(h.title) === norm(modId))?.projectId ?? null;
 }
 
 /** Newest version file of a project, regardless of loader/MC (used for modpacks). */

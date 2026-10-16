@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   Puzzle,
@@ -11,6 +11,7 @@ import {
   FolderOpen,
   Trash2,
   Globe,
+  Camera,
   type LucideIcon
 } from 'lucide-react';
 import { useStore } from '../store';
@@ -21,6 +22,8 @@ import { ContentManagerModal } from './ContentManagerModal';
 import { ConsoleModal } from './ConsoleModal';
 import { EditInstanceModal } from './EditInstanceModal';
 import { WorldsModal } from './WorldsModal';
+import { ExportModal } from './ExportModal';
+import { ScreenshotsModal } from './ScreenshotsModal';
 import { confirmDialog, alertDialog, showToast } from '../ui/feedback';
 import { formatDate, formatPlaytime } from '../format';
 import type { Instance } from '../../shared/types';
@@ -32,15 +35,23 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
   const [showConsole, setShowConsole] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showWorlds, setShowWorlds] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showShots, setShowShots] = useState(false);
+  // Mod updates found in the background, shown as a badge on the mods tile.
+  const [modUpdates, setModUpdates] = useState(0);
+  const [modsCheck, setModsCheck] = useState(false);
 
-  const handleExport = async () => {
-    try {
-      const dest = await window.api.modpacks.export(instance.id);
-      if (dest) showToast(`Wyeksportowano paczkę:\n${dest}`, 'success');
-    } catch (e) {
-      alertDialog({ message: (e as Error).message, tone: 'error' });
-    }
-  };
+  useEffect(() => {
+    if (instance.loader === 'vanilla' || showMods) return;
+    let alive = true;
+    window.api.mods
+      .checkUpdates(instance.id, 'mod')
+      .then((u) => alive && setModUpdates(u.length))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [instance.id, showMods]);
 
   const handleDuplicate = async () => {
     try {
@@ -74,10 +85,19 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
     }
   };
 
-  const actions: Array<{ icon: LucideIcon; label: string; onClick: () => void; filled?: boolean }> = [
-    { icon: Puzzle, label: 'Mody, packi, shadery', onClick: () => setShowMods(true) },
+  const actions: Array<{ icon: LucideIcon; label: string; onClick: () => void; filled?: boolean; badge?: string }> = [
+    {
+      icon: Puzzle,
+      label: 'Mody, packi, shadery',
+      onClick: () => {
+        setModsCheck(modUpdates > 0);
+        setShowMods(true);
+      },
+      badge: modUpdates ? `${modUpdates} ${modUpdates === 1 ? 'aktualizacja' : 'aktualizacji'}` : undefined
+    },
     { icon: Terminal, label: 'Konsola (logi gry)', onClick: () => setShowConsole(true) },
     { icon: Earth, label: 'Światy i kopie', onClick: () => setShowWorlds(true) },
+    { icon: Camera, label: 'Zrzuty ekranu', onClick: () => setShowShots(true) },
     { icon: SlidersHorizontal, label: 'Ustawienia instancji', onClick: () => setShowEdit(true) },
     { icon: Copy, label: 'Duplikuj instancję', onClick: handleDuplicate },
     {
@@ -86,7 +106,7 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
       onClick: togglePin,
       filled: instance.pinned
     },
-    { icon: Package, label: 'Eksportuj .zerda', onClick: handleExport },
+    { icon: Package, label: 'Eksportuj paczkę', onClick: () => setShowExport(true) },
     { icon: FolderOpen, label: 'Otwórz folder', onClick: () => window.api.instances.openFolder(instance.id) }
   ];
 
@@ -143,10 +163,11 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
       )}
 
       <div className="detail-actions">
-        {actions.map(({ icon: Icon, label, onClick, filled }) => (
+        {actions.map(({ icon: Icon, label, onClick, filled, badge }) => (
           <button className="detail-tile" key={label} onClick={onClick}>
             <Icon className="dt-ic" fill={filled ? 'currentColor' : 'none'} />
             {label}
+            {badge && <span className="dt-badge">{badge}</span>}
           </button>
         ))}
         <button className="detail-tile danger" onClick={handleDelete}>
@@ -159,9 +180,12 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
         <ContentManagerModal
           instance={instance}
           kinds={['mod', 'resourcepack', 'shader']}
+          checkUpdatesOnOpen={modsCheck}
           onClose={() => setShowMods(false)}
         />
       )}
+      {showExport && <ExportModal instance={instance} onClose={() => setShowExport(false)} />}
+      {showShots && <ScreenshotsModal instance={instance} onClose={() => setShowShots(false)} />}
       {showConsole && <ConsoleModal instance={instance} onClose={() => setShowConsole(false)} />}
       {showEdit && <EditInstanceModal instance={instance} onClose={() => setShowEdit(false)} />}
       {showWorlds && <WorldsModal instance={instance} onClose={() => setShowWorlds(false)} />}

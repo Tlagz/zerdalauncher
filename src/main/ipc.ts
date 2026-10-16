@@ -17,6 +17,16 @@ import { fetchVersionManifest } from './minecraft/manifest';
 import { prepareVersion } from './minecraft/downloader';
 import { resolveJava, listJreStatus, deleteJre, ensureMojangJre } from './minecraft/jre';
 import { launchGame } from './minecraft/launcher';
+import { analyzeCrash } from './minecraft/crashAnalyzer';
+import { applyCrashFix } from './minecraft/crashFixes';
+import { latestLoaderVersion } from './modloaders/latest';
+import {
+  listScreenshots,
+  copyScreenshot,
+  deleteScreenshot,
+  revealScreenshot,
+  openScreenshotsFolder
+} from './minecraft/screenshots';
 import { fabricLoaders, installFabric } from './modloaders/fabric';
 import { forgeVersionsFor, installForge } from './modloaders/forge';
 import { neoforgeVersionsFor, installNeoForge } from './modloaders/neoforge';
@@ -81,7 +91,8 @@ import {
 } from './server';
 import { initTunnel, startTunnel, stopTunnel } from './server/tunnel';
 import { serverDir } from './utils/paths';
-import type { AppSettings, ContentKind, Instance, ModLoader } from '../shared/types';
+import type { AppSettings, ContentKind, CrashFix, ExportOptions, Instance } from '../shared/types';
+import type { ThemePresetFile } from '../shared/appearance';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -106,6 +117,9 @@ function emitToAll(channel: string, payload: unknown): void {
 const games = new Map<string, ChildProcess>();
 const starting = new Set<string>();
 const emitRunning = () => emitToAll(IPC.mcRunning, [...games.keys()]);
+// Games the user stopped with "Zabij grę" — their exit isn't a crash.
+const killed = new Set<string>();
+const GAME_LOG_CAP = 600_000;
 
 export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   // Instances
@@ -160,6 +174,13 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     restoreWorld(id, res.filePaths[0]);
     return listWorlds(id);
   });
+
+  // Screenshots
+  ipcMain.handle(IPC.screenshotsList, (_e, id: string) => listScreenshots(id));
+  ipcMain.handle(IPC.screenshotsCopy, (_e, id: string, name: string) => copyScreenshot(id, name));
+  ipcMain.handle(IPC.screenshotsDelete, (_e, id: string, name: string) => deleteScreenshot(id, name));
+  ipcMain.handle(IPC.screenshotsReveal, (_e, id: string, name: string) => revealScreenshot(id, name));
+  ipcMain.handle(IPC.screenshotsOpenFolder, (_e, id: string) => openScreenshotsFolder(id));
 
   ipcMain.handle(IPC.instancesPickIcon, async () => {
     const win = getMainWindow() ?? undefined;
@@ -277,17 +298,22 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     if (res.canceled || !res.filePaths[0]) return null;
     return importPackFile(res.filePaths[0], packProgress);
   });
-  ipcMain.handle(IPC.packExport, async (_e, instanceId: string) => {
+  ipcMain.handle(IPC.packExport, async (_e, instanceId: string, opts: ExportOptions) => {
     const win = getMainWindow() ?? undefined;
     const instance = getInstance(instanceId);
     const suggested = (instance?.name ?? 'modpack').replace(/[^\w.-]+/g, '_');
+    const ext = opts.format === 'mrpack' ? 'mrpack' : 'zerda';
     const res = await dialog.showSaveDialog(win!, {
       title: 'Eksportuj paczkę',
-      defaultPath: `${suggested}.zerda`,
-      filters: [{ name: 'Paczka ZerdaLauncher', extensions: ['zerda'] }]
+      defaultPath: `${suggested}.${ext}`,
+      filters: [
+        ext === 'mrpack'
+          ? { name: 'Modpack Modrinth', extensions: ['mrpack'] }
+          : { name: 'Paczka ZerdaLauncher', extensions: ['zerda'] }
+      ]
     });
     if (res.canceled || !res.filePath) return null;
-    exportInstance(instanceId, res.filePath);
+    await exportInstance(instanceId, res.filePath, opts, packProgress);
     return res.filePath;
   });
 
@@ -380,6 +406,62 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     const f = bgFile();
     if (f) fs.rmSync(f, { force: true });
   });
+  // Theme presets as shareable .zerdatheme files (JSON, optionally with the background image).
+  ipcMain.handle(
+    IPC.appearanceExportPreset,
+    async (_e, preset: Pick<ThemePresetFile, 'name' | 'theme' | 'look'>, withImage: boolean) => {
+      const win = getMainWindow() ?? undefined;
+      const res = await dialog.showSaveDialog(win!, {
+        title: 'Eksportuj motyw',
+        defaultPath: `${preset.name.replace(/[^\w.-]+/g, '_') || 'motyw'}.zerdatheme`,
+        filters: [{ name: 'Motyw ZerdaLauncher', extensions: ['zerdatheme'] }]
+      });
+      if (res.canceled || !res.filePath) return null;
+      const img = withImage ? bgFile() : undefined;
+      const file: ThemePresetFile = {
+        type: 'zerda-theme',
+        version: 1,
+        name: preset.name,
+        theme: preset.theme,
+        look: preset.look,
+        ...(img ? { backgroundImage: bgDataUrl(img) } : {})
+      };
+      fs.writeFileSync(res.filePath, JSON.stringify(file));
+      return res.filePath;
+    }
+  );
+  ipcMain.handle(IPC.appearanceImportPreset, async () => {
+    const win = getMainWindow() ?? undefined;
+    const res = await dialog.showOpenDialog(win!, {
+      title: 'Importuj motyw',
+      properties: ['openFile'],
+      filters: [{ name: 'Motyw ZerdaLauncher', extensions: ['zerdatheme', 'json'] }]
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    if (fs.statSync(res.filePaths[0]).size > 25 * 1024 * 1024) throw new Error('Plik motywu jest za duży.');
+    let file: ThemePresetFile;
+    try {
+      file = JSON.parse(fs.readFileSync(res.filePaths[0], 'utf8'));
+    } catch {
+      throw new Error('To nie jest plik motywu.');
+    }
+    if (file?.type !== 'zerda-theme' || typeof file.name !== 'string' || typeof file.look !== 'object') {
+      throw new Error('To nie jest plik motywu ZerdaLauncher.');
+    }
+    // An embedded image becomes the current custom background.
+    let backgroundImage: string | null = null;
+    const m =
+      typeof file.backgroundImage === 'string' &&
+      file.backgroundImage.match(/^data:image\/(png|jpeg|webp|gif);base64,(.+)$/);
+    if (m) {
+      const old = bgFile();
+      if (old) fs.rmSync(old, { force: true });
+      const dest = path.join(paths.root, `background.${m[1] === 'jpeg' ? 'jpg' : m[1]}`);
+      fs.writeFileSync(dest, Buffer.from(m[2], 'base64'));
+      backgroundImage = bgDataUrl(dest);
+    }
+    return { name: file.name.slice(0, 40), theme: String(file.theme || 'default'), look: file.look, backgroundImage };
+  });
 
   // Settings
   ipcMain.handle(IPC.settingsGet, () => getSettings());
@@ -418,8 +500,16 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   // Running games
   ipcMain.handle(IPC.mcRunningList, () => [...games.keys()]);
   ipcMain.handle(IPC.mcKill, (_e, instanceId: string) => {
-    games.get(instanceId)?.kill();
+    const child = games.get(instanceId);
+    if (!child) return;
+    killed.add(instanceId);
+    child.kill();
   });
+  ipcMain.handle(IPC.mcCrashFix, (_e, instanceId: string, fix: CrashFix) =>
+    applyCrashFix(instanceId, fix, (current, total, message) =>
+      emitToAll(IPC.mcCrashFixProgress, { instanceId, current, total, message })
+    )
+  );
 
   // Game data location
   const dataProgress = (done: number, total: number, message: string) =>
@@ -486,6 +576,9 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
 
       status('launching', 'Uruchamiam Minecraft');
       const playStart = Date.now();
+      const settings = getSettings();
+      let gameLog = '';
+      killed.delete(instanceId);
       const child = launchGame({
         instance,
         account: acc,
@@ -503,9 +596,24 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
           });
           setIdle();
           status('stopped', `Gra zakończona (kod ${code ?? 0})`);
+          if (killed.delete(instanceId)) return;
+          try {
+            const report = analyzeCrash({
+              instance: getInstance(instance.id) ?? instance,
+              exitCode: code,
+              log: gameLog,
+              startedAt: playStart,
+              requiredJava: prepared.data.javaVersion?.majorVersion ?? 8,
+              javaOverride: !!(instance.javaPath?.trim() || settings.javaPath?.trim())
+            });
+            if (report) emitToAll(IPC.mcCrash, report);
+          } catch (e) {
+            console.error('crash analysis failed', e);
+          }
         },
         onLog: (line) => {
           process.stdout.write(line);
+          gameLog = (gameLog + line).slice(-GAME_LOG_CAP);
           emitToAll(IPC.mcLog, { instanceId, line });
         }
       });
@@ -556,15 +664,4 @@ async function resolveLaunchVersion(
   if (instance.loader === 'forge') return installForge(instance.mcVersion, loaderVersion);
   if (instance.loader === 'neoforge') return installNeoForge(loaderVersion);
   return instance.mcVersion;
-}
-
-/** Newest available loader version for an MC version, or undefined if none. */
-async function latestLoaderVersion(loader: ModLoader, mc: string): Promise<string | undefined> {
-  if (loader === 'fabric') return (await fabricLoaders(mc)).latest;
-  if (loader === 'forge') {
-    const f = await forgeVersionsFor(mc);
-    return f.recommended ?? f.latest;
-  }
-  if (loader === 'neoforge') return (await neoforgeVersionsFor(mc)).latest;
-  return undefined;
 }

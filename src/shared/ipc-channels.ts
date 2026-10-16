@@ -9,6 +9,13 @@ export const IPC = {
   instancesOpenCrashReports: 'instances:openCrashReports',
   instancesPickIcon: 'instances:pickIcon',
 
+  // Screenshots
+  screenshotsList: 'screenshots:list',
+  screenshotsCopy: 'screenshots:copy',
+  screenshotsDelete: 'screenshots:delete',
+  screenshotsReveal: 'screenshots:reveal',
+  screenshotsOpenFolder: 'screenshots:openFolder',
+
   // Servers
   serversList: 'servers:list',
   serversCreate: 'servers:create',
@@ -43,6 +50,9 @@ export const IPC = {
   mcKill: 'mc:kill',
   mcRunningList: 'mc:runningList',
   mcRunning: 'mc:running',
+  mcCrash: 'mc:crash',
+  mcCrashFix: 'mc:crashFix',
+  mcCrashFixProgress: 'mc:crashFixProgress',
 
   // Game data location
   dataLocation: 'data:location',
@@ -101,6 +111,8 @@ export const IPC = {
   appearanceBackground: 'appearance:background',
   appearancePickBackground: 'appearance:pickBackground',
   appearanceClearBackground: 'appearance:clearBackground',
+  appearanceExportPreset: 'appearance:exportPreset',
+  appearanceImportPreset: 'appearance:importPreset',
 
   // Settings
   settingsGet: 'settings:get',

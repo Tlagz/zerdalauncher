@@ -8,8 +8,12 @@ import type {
   UpdateStatus,
   ServerInstance,
   ServerStatus,
-  TunnelStatus
+  TunnelStatus,
+  CrashReport
 } from '../shared/types';
+
+/** Instances-page actions other places can trigger (e.g. the Ctrl+K palette). */
+export type InstancesAction = 'create' | 'modpacks' | 'import';
 
 interface UiState {
   page: 'home' | 'instances' | 'servers' | 'accounts' | 'customize' | 'settings';
@@ -26,6 +30,15 @@ interface UiState {
   launchStatus: LaunchStatus | null;
   /** Instance ids whose game process is currently running. */
   runningGames: string[];
+
+  /** Diagnosis of the last crashed game session (shown in a dialog). */
+  crash: CrashReport | null;
+  /** Instance whose detail view is open on the Instances page. */
+  selectedInstanceId: string | null;
+  /** Open an instance's detail view from anywhere. */
+  openInstance: (id: string | null) => void;
+  pendingAction: InstancesAction | null;
+  paletteOpen: boolean;
 
   /** Game console output per instance id (capped buffer). */
   logs: Record<string, string>;
@@ -63,6 +76,11 @@ export const useStore = create<UiState>((set) => ({
   launchProgress: null,
   launchStatus: null,
   runningGames: [],
+  crash: null,
+  selectedInstanceId: null,
+  openInstance: (id) => set({ selectedInstanceId: id, ...(id ? { page: 'instances' as const } : {}) }),
+  pendingAction: null,
+  paletteOpen: false,
   logs: {},
   clearLogs: (instanceId) =>
     set((s) => ({ logs: { ...s.logs, [instanceId]: '' } })),
@@ -91,6 +109,7 @@ window.api.mc.onProgress((p) => useStore.setState({ launchProgress: p }));
 window.api.mc.onStatus((s) => useStore.setState({ launchStatus: s }));
 window.api.mc.onRunning((ids) => useStore.setState({ runningGames: ids }));
 window.api.mc.runningList().then((ids) => useStore.setState({ runningGames: ids }));
+window.api.mc.onCrash((crash) => useStore.setState({ crash }));
 window.api.mc.onLog(({ instanceId, line }) =>
   useStore.setState((s) => {
     const next = ((s.logs[instanceId] ?? '') + line).slice(-LOG_CAP);

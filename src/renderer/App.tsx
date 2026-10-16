@@ -12,6 +12,8 @@ import { SettingsPage } from './components/SettingsPage';
 import { LoginScreen } from './components/LoginScreen';
 import { StatusBar } from './components/StatusBar';
 import { UpdateBanner } from './components/UpdateBanner';
+import { CrashModal } from './components/CrashModal';
+import { CommandPalette } from './components/CommandPalette';
 import { FeedbackHost, alertDialog, showToast } from './ui/feedback';
 
 export default function App() {
@@ -20,6 +22,7 @@ export default function App() {
 
   const settings = useStore((s) => s.settings);
   const backgroundImage = useStore((s) => s.backgroundImage);
+  const crash = useStore((s) => s.crash);
   const appearance = useMemo(() => resolveAppearance(settings?.appearance), [settings?.appearance]);
 
   useEffect(() => {
@@ -105,6 +108,8 @@ export default function App() {
         </div>
         <StatusBar />
       </div>
+      {crash && <CrashModal key={crash.instanceId + crash.logTail.length} report={crash} onClose={() => useStore.setState({ crash: null })} />}
+      <CommandPalette />
       <FeedbackHost />
     </>
   );

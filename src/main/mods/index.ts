@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { instanceDir, instanceGameDir } from '../utils/paths';
 import { readJson, writeJson } from '../utils/store';
-import { downloadFile } from '../utils/http';
+import { downloadFile, sha1File } from '../utils/http';
 import { getInstance } from '../minecraft/instances';
 import * as modrinth from './modrinth';
 import * as curseforge from './curseforge';
@@ -241,6 +241,7 @@ export async function fetchInstalledIcons(
   instanceId: string,
   kind: ContentKind
 ): Promise<InstalledMod[]> {
+  await identifyContent(instanceId, kind).catch(() => undefined);
   const manifest = readManifest(instanceId, kind);
   const installed = listInstalledContent(instanceId, kind);
   const missing = installed.filter((m) => m.provider && m.projectId && !m.iconUrl);
@@ -300,18 +301,107 @@ export function deleteContent(
   return listInstalledContent(instanceId, kind);
 }
 
+// ---------- identification by hash ----------
+
+// sha1 per file, keyed by path + size + mtime so unchanged files are hashed once.
+const hashCache = new Map<string, string>();
+// Hashes Modrinth didn't recognise this session (local builds, CurseForge-only mods).
+const unknownHashes = new Set<string>();
+
+async function fileSha1(file: string): Promise<string> {
+  const st = fs.statSync(file);
+  const key = `${file}|${st.size}|${st.mtimeMs}`;
+  let h = hashCache.get(key);
+  if (!h) {
+    h = await sha1File(file);
+    hashCache.set(key, h);
+  }
+  return h;
+}
+
+/** sha1 of every installed file of a kind, keyed by its on-disk name. */
+export async function installedHashes(instanceId: string, kind: ContentKind): Promise<Map<string, string>> {
+  const dir = contentDir(instanceId, kind);
+  const out = new Map<string, string>();
+  for (const m of listInstalledContent(instanceId, kind)) {
+    try {
+      out.set(m.fileName, await fileSha1(path.join(dir, m.fileName)));
+    } catch {
+      /* unreadable — skip */
+    }
+  }
+  return out;
+}
+
+/**
+ * Recognise files that weren't installed through the launcher (added from disk,
+ * unpacked from a modpack) by their hash on Modrinth, so they get a title, an
+ * icon and update checks like everything else.
+ */
+export async function identifyContent(instanceId: string, kind: ContentKind): Promise<void> {
+  const manifest = readManifest(instanceId, kind);
+  const hashes = await installedHashes(instanceId, kind);
+  const untracked = [...hashes].filter(([file, h]) => !manifest[baseName(file)] && !unknownHashes.has(h));
+  if (!untracked.length) return;
+
+  const found = await modrinth.versionsByHash(untracked.map(([, h]) => h));
+  const projects = await modrinth
+    .projectsByIds([...new Set(Object.values(found).map((v) => v.projectId))])
+    .catch(() => []);
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  for (const [file, h] of untracked) {
+    const v = found[h];
+    if (!v) {
+      unknownHashes.add(h);
+      continue;
+    }
+    const p = byId.get(v.projectId);
+    manifest[baseName(file)] = {
+      provider: 'modrinth',
+      projectId: v.projectId,
+      fileId: v.fileId,
+      title: p?.title ?? v.displayName,
+      iconUrl: p?.icon_url
+    };
+  }
+  writeManifest(instanceId, kind, manifest);
+}
+
 // ---------- updates ----------
 
-/** Check installed (provider-tracked) items for a newer version at the source. */
+/**
+ * Check installed items for a newer compatible version. Modrinth files (also
+ * ones recognised by hash) are checked in a single bulk request; CurseForge
+ * items one by one.
+ */
 export async function checkUpdates(instanceId: string, kind: ContentKind): Promise<ContentUpdate[]> {
   const instance = getInstance(instanceId);
   if (!instance) return [];
+  await identifyContent(instanceId, kind).catch(() => undefined);
   const installed = listInstalledContent(instanceId, kind);
   const loader = effectiveLoader(kind, instance.loader);
   const out: ContentUpdate[] = [];
+
+  const mr = installed.filter((m) => m.provider === 'modrinth' && m.fileId);
+  if (mr.length) {
+    const hashes = await installedHashes(instanceId, kind);
+    const wanted = mr.map((m) => hashes.get(m.fileName)).filter((h): h is string => !!h);
+    try {
+      const latest = await modrinth.latestByHash(wanted, loader, instance.mcVersion);
+      for (const m of mr) {
+        const best = latest[hashes.get(m.fileName) ?? ''];
+        if (best && best.fileId !== m.fileId && best.url) {
+          out.push({ fileName: m.fileName, title: m.title ?? m.fileName, currentFileId: m.fileId, newFile: best });
+        }
+      }
+    } catch {
+      /* Modrinth unreachable — report what CurseForge gives */
+    }
+  }
+
   await Promise.all(
     installed.map(async (m) => {
-      if (!m.provider || !m.projectId || !m.fileId) return;
+      if (m.provider !== 'curseforge' || !m.projectId || !m.fileId) return;
       try {
         const best = await bestFileFor(m.provider, m.projectId, instance.mcVersion, loader);
         if (best && best.fileId !== m.fileId) {

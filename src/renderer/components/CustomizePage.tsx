@@ -10,13 +10,25 @@ import {
   Waves,
   Square,
   Pipette,
-  Check
+  Check,
+  Bookmark,
+  BookmarkPlus,
+  Download,
+  Share2
 } from 'lucide-react';
 import { useStore } from '../store';
 import { Segmented } from '../ui/Segmented';
 import { Toggle } from '../ui/Toggle';
-import { alertDialog, confirmDialog } from '../ui/feedback';
-import { DEFAULT_APPEARANCE, resolveAppearance, type Appearance } from '../../shared/appearance';
+import { alertDialog, confirmDialog, showToast } from '../ui/feedback';
+import {
+  DEFAULT_APPEARANCE,
+  BUILTIN_PRESETS,
+  PRESET_KEYS,
+  pickLook,
+  resolveAppearance,
+  type Appearance,
+  type ThemePreset
+} from '../../shared/appearance';
 
 const THEMES = [
   { id: 'default', label: 'Domyślny', desc: 'Fiolet + cyan' },
@@ -24,6 +36,10 @@ const THEMES = [
   { id: 'crimson', label: 'Crimson', desc: 'Czerwień + czerń' },
   { id: 'light', label: 'Jasny', desc: 'Dzienny' }
 ];
+
+/** Preset previews: each theme's own accent and base color. */
+const THEME_ACCENT: Record<string, string> = { default: '#8b5cf6', dark: '#5b7bb0', crimson: '#ef4444', light: '#6366f1' };
+const THEME_BASE: Record<string, string> = { default: '#1e1b4b', dark: '#08090d', crimson: '#0c0708', light: '#eef0f7' };
 
 const ACCENTS = ['#8b5cf6', '#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#84cc16', '#f59e0b', '#f97316', '#ef4444', '#ec4899'];
 
@@ -117,8 +133,87 @@ export function CustomizePage() {
     if (ok) update({ ...DEFAULT_APPEARANCE }, 'default');
   };
 
+  // ---------- theme presets ----------
+  const [naming, setNaming] = useState<string | null>(null);
+  const userPresets = settings?.themePresets ?? [];
+  const savePresets = (themePresets: ThemePreset[]) => {
+    const s = useStore.getState().settings;
+    if (!s) return;
+    useStore.setState({ settings: { ...s, themePresets } });
+    void window.api.settings.set({ themePresets });
+  };
+  const applyPreset = (p: Pick<ThemePreset, 'theme' | 'look'>, image = backgroundImage) =>
+    update({ ...p.look, background: p.look.background === 'image' && !image ? 'aurora' : p.look.background }, p.theme);
+  const isActive = (p: ThemePreset) =>
+    p.theme === (settings?.theme || 'default') && PRESET_KEYS.every((k) => p.look[k] === ap[k]);
+  const saveCurrent = () => {
+    const name = naming?.trim();
+    if (!name) return;
+    savePresets([...userPresets, { id: `p-${Date.now()}`, name, theme: settings?.theme || 'default', look: pickLook(ap) }]);
+    setNaming(null);
+    showToast(`Zapisano motyw „${name}”.`, 'success');
+  };
+  const removePreset = async (p: ThemePreset) => {
+    const ok = await confirmDialog({ title: 'Usunąć motyw?', message: `„${p.name}" zniknie z listy.`, danger: true, confirmLabel: 'Usuń' });
+    if (ok) savePresets(userPresets.filter((x) => x.id !== p.id));
+  };
+  const exportPreset = async (p: ThemePreset) => {
+    try {
+      const withImage = p.look.background === 'image' && !!backgroundImage;
+      const dest = await window.api.appearance.exportPreset({ name: p.name, theme: p.theme, look: p.look }, withImage);
+      if (dest) showToast(`Wyeksportowano motyw:\n${dest}`, 'success');
+    } catch (e) {
+      alertDialog({ title: 'Eksport nie powiódł się', message: (e as Error).message, tone: 'error' });
+    }
+  };
+  const importPreset = async () => {
+    try {
+      const res = await window.api.appearance.importPreset();
+      if (!res) return;
+      if (res.backgroundImage) useStore.setState({ backgroundImage: res.backgroundImage });
+      const preset: ThemePreset = {
+        id: `p-${Date.now()}`,
+        name: res.name || 'Zaimportowany',
+        theme: THEMES.some((t) => t.id === res.theme) ? res.theme : 'default',
+        // Fill gaps from the defaults and drop unknown keys.
+        look: pickLook(resolveAppearance(res.look))
+      };
+      savePresets([...userPresets, preset]);
+      applyPreset(preset, res.backgroundImage ?? backgroundImage);
+      showToast(`Zaimportowano motyw „${preset.name}”.`, 'success');
+    } catch (e) {
+      alertDialog({ title: 'Import nie powiódł się', message: (e as Error).message, tone: 'error' });
+    }
+  };
+
   if (!settings) return null;
   const theme = settings.theme || 'default';
+
+  const presetCard = (p: ThemePreset, own: boolean) => (
+    <div className={`preset-card ${isActive(p) ? 'active' : ''}`} key={p.id}>
+      <button type="button" className="preset-apply" onClick={() => applyPreset(p)} title={`Zastosuj „${p.name}”`}>
+        <span
+          className="preset-swatch"
+          style={{
+            background: `linear-gradient(135deg, ${p.look.accent ?? THEME_ACCENT[p.theme] ?? '#8b5cf6'}, ${THEME_BASE[p.theme] ?? '#0b0d17'} 72%)`
+          }}
+        >
+          {isActive(p) && <Check size={16} />}
+        </span>
+        <span className="preset-name truncate">{p.name}</span>
+      </button>
+      <div className="preset-actions">
+        <button type="button" className="ghost icon-btn" title="Eksportuj do pliku" onClick={() => exportPreset(p)}>
+          <Share2 size={14} />
+        </button>
+        {own && (
+          <button type="button" className="ghost icon-btn" title="Usuń" onClick={() => removePreset(p)}>
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -130,6 +225,53 @@ export function CustomizePage() {
         <button className="ghost" onClick={resetAll}>
           <RotateCcw size={16} /> Przywróć domyślne
         </button>
+      </div>
+
+      <div className="section">
+        <h3>
+          <Bookmark size={16} /> Moje motywy
+        </h3>
+        <div className="preset-grid">
+          {BUILTIN_PRESETS.map((p) => presetCard(p, false))}
+          {userPresets.map((p) => presetCard(p, true))}
+        </div>
+        {naming === null ? (
+          <div className="preset-toolbar">
+            <button type="button" onClick={() => setNaming('')}>
+              <BookmarkPlus size={15} /> Zapisz obecny wygląd
+            </button>
+            <button type="button" className="ghost" onClick={importPreset}>
+              <Download size={15} /> Importuj z pliku
+            </button>
+          </div>
+        ) : (
+          <form
+            className="preset-toolbar"
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveCurrent();
+            }}
+          >
+            <input
+              autoFocus
+              value={naming}
+              maxLength={40}
+              placeholder="Nazwa motywu"
+              onChange={(e) => setNaming(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && setNaming(null)}
+            />
+            <button type="submit" className="primary" disabled={!naming.trim()}>
+              <Check size={15} /> Zapisz
+            </button>
+            <button type="button" className="ghost" onClick={() => setNaming(null)}>
+              Anuluj
+            </button>
+          </form>
+        )}
+        <div className="field-hint">
+          Motyw zapamiętuje kolory, tło i efekt szkła. Skala, pasek boczny i animacje zostają bez zmian. Wyeksportowany
+          plik .zerdatheme możesz wysłać znajomym.
+        </div>
       </div>
 
       <div className="section">

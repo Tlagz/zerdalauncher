@@ -1,4 +1,4 @@
-import type { Appearance } from './appearance';
+import type { Appearance, ThemePreset } from './appearance';
 
 export type ModLoader = 'vanilla' | 'fabric' | 'forge' | 'neoforge';
 
@@ -24,6 +24,8 @@ export interface Instance {
   pinned?: boolean;
   /** Folder name under instances/ (human-readable; older instances used the id). */
   dir?: string;
+  /** User-defined group the instance is listed under (empty = ungrouped). */
+  group?: string;
 }
 
 export interface Account {
@@ -66,6 +68,8 @@ export interface AppSettings {
   theme: string;
   /** Personalization (accent, background, motion, layout); missing keys use defaults. */
   appearance?: Partial<Appearance>;
+  /** Looks saved by the user on the Personalizacja page. */
+  themePresets?: ThemePreset[];
 }
 
 /** Mod loader build versions for a given MC version, split into stable/unstable. */
@@ -215,4 +219,61 @@ export interface ContentUpdate {
   title: string;
   currentFileId?: string;
   newFile: ModFile;
+}
+
+// --- Crash analysis ---
+/** A one-click repair the crash dialog can offer. */
+export type CrashFix =
+  | { kind: 'ram'; ramMb: number }
+  /** Download Mojang's Java N runtime and pin it on the instance. */
+  | { kind: 'java'; major: number }
+  /** Drop a manually set Java path so the launcher picks the right one. */
+  | { kind: 'clearJava' }
+  | { kind: 'disableMods'; files: string[] }
+  /** Install missing dependencies, by mod id (resolved on Modrinth). */
+  | { kind: 'installMods'; modIds: string[] }
+  /** Delete a corrupted launcher-managed file so it is downloaded again. */
+  | { kind: 'deleteFile'; path: string }
+  /** Switch to the newest stable mod loader build. */
+  | { kind: 'updateLoader' }
+  /** Remove custom JVM arguments the Java version doesn't understand. */
+  | { kind: 'clearJvmArgs' }
+  /** Open the instance's mod manager (e.g. to update mods). */
+  | { kind: 'openMods' };
+
+export interface CrashIssue {
+  title: string;
+  detail: string;
+  fix?: CrashFix;
+  fixLabel?: string;
+}
+
+export interface CrashReport {
+  instanceId: string;
+  instanceName: string;
+  exitCode: number | null;
+  issues: CrashIssue[];
+  /** The most telling exception line, when no known cause matched. */
+  keyLine?: string;
+  crashReportFile?: string;
+  /** Last part of the game log, for copying into a bug report. */
+  logTail: string;
+}
+
+/** A screenshot in an instance's screenshots folder. */
+export interface ScreenshotInfo {
+  name: string;
+  size: number;
+  takenAt: number;
+}
+
+/** What to put into an exported pack. */
+export interface ExportOptions {
+  format: 'zerda' | 'mrpack';
+  config: boolean;
+  resourcepacks: boolean;
+  shaderpacks: boolean;
+  options: boolean;
+  /** World folder names to include (saves/). */
+  worlds: string[];
 }

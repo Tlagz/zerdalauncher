@@ -91,14 +91,17 @@ function KindPlaceholder({ kind }: { kind: ContentKind }) {
 export function ContentManagerModal({
   instance,
   kinds,
-  onClose
+  onClose,
+  checkUpdatesOnOpen
 }: {
   instance: Instance;
   kinds: ContentKind[];
   onClose: () => void;
+  /** Open on the installed list and look for updates right away. */
+  checkUpdatesOnOpen?: boolean;
 }) {
   const [kind, setKind] = useState<ContentKind>(kinds[0]);
-  const [tab, setTab] = useState<'browse' | 'installed'>('browse');
+  const [tab, setTab] = useState<'browse' | 'installed'>(checkUpdatesOnOpen ? 'installed' : 'browse');
   const [provider, setProvider] = useState<ModProvider>('modrinth');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
@@ -189,11 +192,19 @@ export function ContentManagerModal({
     loadInstalled();
   }, [kind]);
 
+  useEffect(() => {
+    if (checkUpdatesOnOpen) void checkForUpdates();
+  }, []);
+
   const checkForUpdates = async () => {
     setChecking(true);
     setError(null);
     try {
-      setUpdates(await window.api.mods.checkUpdates(instance.id, kind));
+      const found = await window.api.mods.checkUpdates(instance.id, kind);
+      setUpdates(found);
+      if (!found.length) showToast('Wszystko jest aktualne.', 'success');
+      // Hash lookups may have recognised files added by hand — refresh their names and icons.
+      setInstalled(await window.api.mods.installed(instance.id, kind));
     } catch (e) {
       setError((e as Error).message);
     } finally {

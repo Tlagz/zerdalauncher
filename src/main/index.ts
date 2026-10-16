@@ -10,6 +10,10 @@ import { initDiscord } from './discord';
 import { killAllServers } from './server';
 import { stopAllTunnels } from './server/tunnel';
 import { IPC } from '../shared/ipc-channels';
+import { registerShotScheme, registerShotProtocol } from './minecraft/screenshots';
+
+// Custom schemes must be declared before the app is ready.
+registerShotScheme();
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -108,6 +112,7 @@ if (!gotLock) {
     initUpdater(() => mainWindow);
     void initDiscord();
     registerIpc(() => mainWindow);
+    registerShotProtocol();
     createWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

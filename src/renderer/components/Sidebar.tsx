@@ -1,4 +1,4 @@
-import { House, Gamepad2, Server, Users, Brush, Settings } from 'lucide-react';
+import { House, Gamepad2, Server, Users, Brush, Settings, Search } from 'lucide-react';
 import { useStore } from '../store';
 import { AccountAvatar } from './AccountAvatar';
 import { transition } from '../ui/viewTransition';
@@ -22,7 +22,13 @@ export function Sidebar() {
   const indicator = useIndicator<HTMLElement>(page, 'y');
 
   const go = (id: (typeof NAV)[number]['id']) => {
-    if (id !== page) transition(() => setPage(id));
+    // "Instancje" always lands on the list, also when an instance's detail view is open.
+    const leaveDetail = id === 'instances' && useStore.getState().selectedInstanceId;
+    if (id === page && !leaveDetail) return;
+    transition(() => {
+      setPage(id);
+      if (leaveDetail) useStore.setState({ selectedInstanceId: null });
+    });
   };
 
   return (
@@ -33,6 +39,16 @@ export function Sidebar() {
           Zerda<span>Launcher</span>
         </span>
       </div>
+
+      <button
+        className="sidebar-search"
+        title="Szukaj (Ctrl+K)"
+        onClick={() => useStore.setState({ paletteOpen: true })}
+      >
+        <Search size={16} />
+        <span className="nav-label">Szukaj…</span>
+        <kbd className="nav-label">Ctrl K</kbd>
+      </button>
 
       <nav className="sidebar-nav" ref={indicator.ref}>
         <span className="nav-indicator" style={indicator.style} aria-hidden />

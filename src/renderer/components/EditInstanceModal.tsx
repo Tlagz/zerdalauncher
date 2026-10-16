@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageUp } from 'lucide-react';
 import { useStore } from '../store';
@@ -15,7 +15,10 @@ function isImageIcon(icon?: string): boolean {
 /** Per-instance settings: name, icon, RAM, Java path and custom JVM args. */
 export function EditInstanceModal({ instance, onClose }: { instance: Instance; onClose: () => void }) {
   const { refreshInstances } = useStore();
+  const instances = useStore((s) => s.instances);
+  const groups = useMemo(() => [...new Set(instances.map((i) => i.group).filter((g): g is string => !!g))].sort(), [instances]);
   const [name, setName] = useState(instance.name);
+  const [group, setGroup] = useState(instance.group ?? '');
   const [icon, setIcon] = useState(instance.icon ?? '');
   const [ramMb, setRamMb] = useState(instance.ramMb);
   const [javaPath, setJavaPath] = useState(instance.javaPath ?? '');
@@ -46,6 +49,7 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
     try {
       await window.api.instances.update(instance.id, {
         name: name.trim() || instance.name,
+        group: group.trim() || undefined,
         icon: icon.trim() || undefined,
         ramMb,
         javaPath: javaPath.trim() || undefined,
@@ -79,6 +83,22 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
           <div className="form-row">
             <label>Nazwa</label>
             <input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+
+          <div className="form-row">
+            <label>Grupa</label>
+            <input
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              list="instance-groups"
+              maxLength={32}
+              placeholder="np. Modpacki, Survival, Testy — puste = bez grupy"
+            />
+            <datalist id="instance-groups">
+              {groups.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
           </div>
 
           <div className="form-row">

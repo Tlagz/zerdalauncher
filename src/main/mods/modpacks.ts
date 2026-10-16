@@ -1,13 +1,16 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import AdmZip from 'adm-zip';
 import { downloadFile } from '../utils/http';
 import { readJson, writeJson } from '../utils/store';
 import { paths, instanceDir, instanceGameDir } from '../utils/paths';
-import { createInstance } from '../minecraft/instances';
+import { createInstance, getInstance } from '../minecraft/instances';
+import { identifyContent, installedHashes } from './index';
+import { latestLoaderVersion } from '../modloaders/latest';
 import * as modrinth from './modrinth';
 import * as curseforge from './curseforge';
-import type { AppSettings, ModLoader, ModProvider, ModFile } from '../../shared/types';
+import type { AppSettings, ModLoader, ModProvider, ModFile, ContentKind, ExportOptions } from '../../shared/types';
 
 export type PackProgress = (current: number, total: number, msg: string) => void;
 
@@ -37,6 +40,15 @@ async function mapLimit<T>(items: T[], limit: number, fn: (item: T, i: number) =
   await Promise.all(workers);
 }
 
+/** Join a pack-supplied relative path onto the game folder, refusing anything that escapes it. */
+function safeJoin(gameDir: string, rel: string): string {
+  const dest = path.resolve(gameDir, rel);
+  if (dest !== path.resolve(gameDir) && !dest.startsWith(path.resolve(gameDir) + path.sep)) {
+    throw new Error(`Paczka zawiera niedozwoloną ścieżkę: ${rel}`);
+  }
+  return dest;
+}
+
 function extractOverrides(zip: AdmZip, gameDir: string, prefixes: string[]): void {
   for (const e of zip.getEntries()) {
     if (e.isDirectory) continue;
@@ -44,7 +56,7 @@ function extractOverrides(zip: AdmZip, gameDir: string, prefixes: string[]): voi
       if (e.entryName.startsWith(prefix)) {
         const rel = e.entryName.slice(prefix.length);
         if (!rel) continue;
-        const dest = path.join(gameDir, rel);
+        const dest = safeJoin(gameDir, rel);
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         fs.writeFileSync(dest, e.getData());
       }
@@ -61,8 +73,9 @@ interface MrIndex {
   dependencies: Record<string, string>;
   files: Array<{
     path: string;
-    hashes?: { sha1?: string };
+    hashes?: { sha1?: string; sha512?: string };
     downloads: string[];
+    fileSize?: number;
     env?: { client?: string; server?: string };
   }>;
 }
@@ -98,7 +111,7 @@ async function installFromMrpack(zip: AdmZip, name: string, progress: PackProgre
   const wanted = index.files.filter((f) => f.env?.client !== 'unsupported' && f.downloads?.[0]);
   let done = 0;
   await mapLimit(wanted, 8, async (f) => {
-    const dest = path.join(gameDir, f.path);
+    const dest = safeJoin(gameDir, f.path);
     await downloadFile(f.downloads[0], dest, f.hashes?.sha1);
     progress(++done, wanted.length, f.path);
   });
@@ -147,7 +160,7 @@ async function installFromZerda(zip: AdmZip, name: string, progress: PackProgres
   await mapLimit(files, 8, async (f) => {
     // Re-resolve a fresh download URL from Modrinth via the stored version id.
     const resolved = await modrinth.getVersionById(f.fileId);
-    const dest = path.join(gameDir, f.path);
+    const dest = safeJoin(gameDir, f.path);
     await downloadFile(resolved.url, dest, resolved.sha1);
     modsMeta[baseName(path.basename(f.path))] = {
       provider: f.provider,
@@ -322,59 +335,114 @@ export async function importPackFile(filePath: string, progress: PackProgress): 
   throw new Error('Nieobsługiwany plik — oczekiwano .mrpack, .zerda lub .zip (CurseForge).');
 }
 
-/** Export an instance to ZerdaLauncher's own .zerda format. */
-export function exportInstance(instanceId: string, destPath: string): void {
-  const all = readJson<Array<{ id: string; name: string; mcVersion: string; loader: ModLoader; loaderVersion?: string; ramMb: number }>>(
-    path.join(paths.root, 'instances.json'),
-    []
-  );
-  const inst = all.find((i) => i.id === instanceId);
+const PACK_DIRS: Array<{ dir: string; kind: ContentKind; ext: RegExp; opt?: keyof ExportOptions }> = [
+  { dir: 'mods', kind: 'mod', ext: /.jar(.disabled)?$/i },
+  { dir: 'resourcepacks', kind: 'resourcepack', ext: /.zip(.disabled)?$/i, opt: 'resourcepacks' },
+  { dir: 'shaderpacks', kind: 'shader', ext: /.zip(.disabled)?$/i, opt: 'shaderpacks' }
+];
+const MR_LOADER_KEY: Record<string, string> = { fabric: 'fabric-loader', forge: 'forge', neoforge: 'neoforge' };
+
+function sha512File(file: string): string {
+  return crypto.createHash('sha512').update(fs.readFileSync(file)).digest('hex');
+}
+
+/**
+ * Export an instance as a ZerdaLauncher .zerda or a standard Modrinth .mrpack
+ * (opens in Modrinth App, Prism, ATLauncher…). Files known to Modrinth are
+ * referenced by download link; everything else is bundled under overrides/.
+ */
+export async function exportInstance(
+  instanceId: string,
+  destPath: string,
+  opts: ExportOptions,
+  progress: PackProgress
+): Promise<void> {
+  const inst = getInstance(instanceId);
   if (!inst) throw new Error('Brak instancji.');
-
+  // Never launched yet: no loader build stored — packs must name one, or they import as vanilla.
+  const loaderVersion =
+    inst.loaderVersion ?? (inst.loader === 'vanilla' ? undefined : await latestLoaderVersion(inst.loader, inst.mcVersion));
+  if (inst.loader !== 'vanilla' && !loaderVersion) {
+    throw new Error(`Nie udało się ustalić wersji ${inst.loader} — uruchom instancję raz i spróbuj ponownie.`);
+  }
   const gameDir = instanceGameDir(instanceId);
-  const modsMeta = readJson<ModsMeta>(path.join(instanceDir(instanceId), 'mods.json'), {});
   const zip = new AdmZip();
-  const files: ZerdaFile[] = [];
+  const zerdaFiles: ZerdaFile[] = [];
+  const mrFiles: MrIndex['files'] = [];
 
-  // Mods: tracked (Modrinth) get referenced for re-download; the rest are bundled.
-  const modsFolder = path.join(gameDir, 'mods');
-  if (fs.existsSync(modsFolder)) {
-    for (const fileName of fs.readdirSync(modsFolder)) {
-      if (!/\.jar(\.disabled)?$/i.test(fileName)) continue;
-      const meta = modsMeta[baseName(fileName)];
-      if (meta?.provider === 'modrinth' && meta.fileId) {
-        files.push({
-          path: 'mods/' + fileName,
-          provider: 'modrinth',
-          projectId: meta.projectId,
-          fileId: meta.fileId
-        });
+  const dirs = PACK_DIRS.filter((d) => !d.opt || opts[d.opt]);
+  let step = 0;
+  for (const d of dirs) {
+    progress(++step, dirs.length + 2, `Rozpoznaję ${d.dir}…`);
+    await identifyContent(instanceId, d.kind).catch(() => undefined);
+    const folder = path.join(gameDir, d.dir);
+    if (!fs.existsSync(folder)) continue;
+    const hashes = await installedHashes(instanceId, d.kind);
+    const known = await modrinth.versionsByHash([...hashes.values()]).catch(() => ({}) as Record<string, ModFile>);
+
+    for (const fileName of fs.readdirSync(folder)) {
+      if (!d.ext.test(fileName)) continue;
+      const full = path.join(folder, fileName);
+      const sha1 = hashes.get(fileName);
+      const v = sha1 ? known[sha1] : undefined;
+      // Disabled files and files we can't link to (or whose link is another file of the version) are bundled.
+      const linkable = v && v.url && v.sha1 === sha1 && !fileName.endsWith('.disabled');
+      if (!linkable) {
+        zip.addLocalFile(full, `overrides/${d.dir}`);
+        continue;
+      }
+      const rel = `${d.dir}/${fileName}`;
+      if (opts.format === 'zerda') {
+        zerdaFiles.push({ path: rel, provider: 'modrinth', projectId: v.projectId, fileId: v.fileId });
       } else {
-        zip.addLocalFile(path.join(modsFolder, fileName), 'overrides/mods');
+        mrFiles.push({
+          path: rel,
+          hashes: { sha1: sha1!, sha512: sha512File(full) },
+          downloads: [v.url],
+          fileSize: fs.statSync(full).size,
+          ...(d.kind === 'mod' ? {} : { env: { client: 'required', server: 'unsupported' } })
+        });
       }
     }
   }
 
-  // Bundle common config/world-agnostic settings.
-  for (const dir of ['config', 'defaultconfigs', 'scripts', 'kubejs']) {
-    const p = path.join(gameDir, dir);
-    if (fs.existsSync(p)) zip.addLocalFolder(p, 'overrides/' + dir);
+  progress(++step, dirs.length + 2, 'Pakuję ustawienia i światy…');
+  if (opts.config) {
+    for (const dir of ['config', 'defaultconfigs', 'scripts', 'kubejs']) {
+      const p = path.join(gameDir, dir);
+      if (fs.existsSync(p)) zip.addLocalFolder(p, 'overrides/' + dir);
+    }
   }
-  for (const file of ['options.txt']) {
-    const p = path.join(gameDir, file);
-    if (fs.existsSync(p)) zip.addLocalFile(p, 'overrides');
+  if (opts.options) {
+    for (const file of ['options.txt', 'optionsof.txt', 'optionsshaders.txt', 'servers.dat']) {
+      const p = path.join(gameDir, file);
+      if (fs.existsSync(p)) zip.addLocalFile(p, 'overrides');
+    }
+  }
+  for (const world of opts.worlds) {
+    const p = path.join(gameDir, 'saves', world);
+    if (world && !world.includes('..') && fs.existsSync(p)) zip.addLocalFolder(p, `overrides/saves/${world}`);
   }
 
-  const manifest: ZerdaManifest = {
-    formatVersion: 1,
-    generator: 'ZerdaLauncher',
-    name: inst.name,
-    mcVersion: inst.mcVersion,
-    loader: inst.loader,
-    loaderVersion: inst.loaderVersion,
-    ramMb: inst.ramMb,
-    files
-  };
-  zip.addFile(ZERDA_MANIFEST, Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'));
-  zip.writeZip(destPath);
+  if (opts.format === 'zerda') {
+    const manifest: ZerdaManifest = {
+      formatVersion: 1,
+      generator: 'ZerdaLauncher',
+      name: inst.name,
+      mcVersion: inst.mcVersion,
+      loader: inst.loader,
+      loaderVersion,
+      ramMb: inst.ramMb,
+      files: zerdaFiles
+    };
+    zip.addFile(ZERDA_MANIFEST, Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'));
+  } else {
+    const dependencies: Record<string, string> = { minecraft: inst.mcVersion };
+    const key = MR_LOADER_KEY[inst.loader];
+    if (key && loaderVersion) dependencies[key] = loaderVersion;
+    const index = { formatVersion: 1, game: 'minecraft', versionId: '1.0.0', name: inst.name, files: mrFiles, dependencies };
+    zip.addFile(MR_INDEX, Buffer.from(JSON.stringify(index, null, 2), 'utf8'));
+  }
+  progress(dirs.length + 2, dirs.length + 2, 'Zapisuję plik…');
+  await zip.writeZipPromise(destPath);
 }

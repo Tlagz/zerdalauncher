@@ -22,8 +22,13 @@ import type {
   TunnelStatus,
   JreStatus,
   LoaderVersionInfo,
-  DataLocationInfo
+  DataLocationInfo,
+  CrashReport,
+  CrashFix,
+  ScreenshotInfo,
+  ExportOptions
 } from '../shared/types';
+import type { PresetLook } from '../shared/appearance';
 
 const api = {
   instances: {
@@ -46,6 +51,18 @@ const api = {
     openCrashReports: (id: string): Promise<string> =>
       ipcRenderer.invoke(IPC.instancesOpenCrashReports, id),
     pickIcon: (): Promise<string | null> => ipcRenderer.invoke(IPC.instancesPickIcon)
+  },
+  screenshots: {
+    list: (id: string): Promise<ScreenshotInfo[]> => ipcRenderer.invoke(IPC.screenshotsList, id),
+    copy: (id: string, name: string): Promise<void> => ipcRenderer.invoke(IPC.screenshotsCopy, id, name),
+    /** Moves the file to the Recycle Bin. */
+    delete: (id: string, name: string): Promise<ScreenshotInfo[]> =>
+      ipcRenderer.invoke(IPC.screenshotsDelete, id, name),
+    reveal: (id: string, name: string): Promise<void> => ipcRenderer.invoke(IPC.screenshotsReveal, id, name),
+    openFolder: (id: string): Promise<string> => ipcRenderer.invoke(IPC.screenshotsOpenFolder, id),
+    /** URL served by the zerda-shot:// protocol. */
+    url: (id: string, name: string, thumb = false): string =>
+      `zerda-shot://shot/${encodeURIComponent(id)}/${encodeURIComponent(name)}${thumb ? '?thumb=1' : ''}`
   },
   servers: {
     list: (): Promise<ServerInstance[]> => ipcRenderer.invoke(IPC.serversList),
@@ -144,6 +161,25 @@ const api = {
       return () => {
         ipcRenderer.off(IPC.mcLog, fn);
       };
+    },
+    /** Fired when a game session ends with a crash, with the diagnosis. */
+    onCrash: (cb: (r: CrashReport) => void): (() => void) => {
+      const fn = (_: unknown, r: CrashReport) => cb(r);
+      ipcRenderer.on(IPC.mcCrash, fn);
+      return () => {
+        ipcRenderer.off(IPC.mcCrash, fn);
+      };
+    },
+    /** Apply a suggested repair; resolves to a short summary. */
+    crashFix: (id: string, fix: CrashFix): Promise<string> => ipcRenderer.invoke(IPC.mcCrashFix, id, fix),
+    onCrashFixProgress: (
+      cb: (p: { instanceId: string; current: number; total: number; message?: string }) => void
+    ): (() => void) => {
+      const fn = (_: unknown, p: { instanceId: string; current: number; total: number; message?: string }) => cb(p);
+      ipcRenderer.on(IPC.mcCrashFixProgress, fn);
+      return () => {
+        ipcRenderer.off(IPC.mcCrashFixProgress, fn);
+      };
     }
   },
   loaders: {
@@ -222,8 +258,8 @@ const api = {
     installFile: (provider: ModProvider, projectId: string, fileId: string): Promise<string> =>
       ipcRenderer.invoke(IPC.modpacksInstallFile, provider, projectId, fileId),
     import: (): Promise<string | null> => ipcRenderer.invoke(IPC.packImport),
-    export: (instanceId: string): Promise<string | null> =>
-      ipcRenderer.invoke(IPC.packExport, instanceId),
+    export: (instanceId: string, opts: ExportOptions): Promise<string | null> =>
+      ipcRenderer.invoke(IPC.packExport, instanceId, opts),
     onProgress: (cb: (p: { current: number; total: number; message: string }) => void): (() => void) => {
       const fn = (_: unknown, p: { current: number; total: number; message: string }) => cb(p);
       ipcRenderer.on(IPC.packProgress, fn);
@@ -269,6 +305,15 @@ const api = {
     background: (): Promise<string | null> => ipcRenderer.invoke(IPC.appearanceBackground),
     pickBackground: (): Promise<string | null> => ipcRenderer.invoke(IPC.appearancePickBackground),
     clearBackground: (): Promise<void> => ipcRenderer.invoke(IPC.appearanceClearBackground),
+    exportPreset: (preset: { name: string; theme: string; look: PresetLook }, withImage: boolean): Promise<string | null> =>
+      ipcRenderer.invoke(IPC.appearanceExportPreset, preset, withImage),
+    /** Reads a .zerdatheme; an embedded image is stored as the current background. */
+    importPreset: (): Promise<{
+      name: string;
+      theme: string;
+      look: Partial<PresetLook>;
+      backgroundImage: string | null;
+    } | null> => ipcRenderer.invoke(IPC.appearanceImportPreset),
     /** UI zoom (1 = 100%); applied to this window only, so it is set on every start. */
     setZoom: (factor: number): void => webFrame.setZoomFactor(factor)
   },
