@@ -1,4 +1,4 @@
-import { House, Gamepad2, Server, Users, Settings } from 'lucide-react';
+import { House, Gamepad2, Server, Users, Brush, Settings } from 'lucide-react';
 import { useStore } from '../store';
 import { AccountAvatar } from './AccountAvatar';
 import { transition } from '../ui/viewTransition';
@@ -10,6 +10,7 @@ const NAV = [
   { id: 'instances', label: 'Instancje', icon: Gamepad2 },
   { id: 'servers', label: 'Serwery', icon: Server },
   { id: 'accounts', label: 'Konta', icon: Users },
+  { id: 'customize', label: 'Personalizacja', icon: Brush },
   { id: 'settings', label: 'Ustawienia', icon: Settings }
 ] as const;
 
@@ -38,6 +39,7 @@ export function Sidebar() {
         {NAV.map(({ id, label, icon: Icon }) => (
           <div
             key={id}
+            title={label}
             role="button"
             tabIndex={0}
             data-active={page === id}
@@ -46,7 +48,7 @@ export function Sidebar() {
             onKeyDown={(e) => e.key === 'Enter' && go(id)}
           >
             <Icon className="nav-icon" strokeWidth={2} />
-            {label}
+            <span className="nav-label">{label}</span>
           </div>
         ))}
       </nav>

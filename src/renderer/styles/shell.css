@@ -134,8 +134,8 @@
   position: relative;
   z-index: 1;
   background: linear-gradient(180deg, rgba(20, 22, 34, 0.72), rgba(10, 11, 18, 0.72));
-  -webkit-backdrop-filter: blur(22px);
-  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(calc(22px * var(--glass-scale, 1)));
+  backdrop-filter: blur(calc(22px * var(--glass-scale, 1)));
   border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;

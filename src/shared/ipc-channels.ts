@@ -97,6 +97,11 @@ export const IPC = {
   skinsApply: 'skins:apply',
   skinsReset: 'skins:reset',
 
+  // Personalization: custom background image
+  appearanceBackground: 'appearance:background',
+  appearancePickBackground: 'appearance:pickBackground',
+  appearanceClearBackground: 'appearance:clearBackground',
+
   // Settings
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',

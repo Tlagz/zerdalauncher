@@ -1,0 +1,280 @@
+/* ============================================================
+   Personalization (renderer/appearance.ts sets these on <html>)
+   ============================================================ */
+
+/* ---------- Background ---------- */
+.aurora {
+  opacity: var(--aurora-strength, 1);
+  transition: opacity 0.4s var(--ease-out);
+}
+html[data-bg='solid'] .aurora,
+html[data-bg='image'] .aurora {
+  opacity: 1;
+  background: var(--bg);
+}
+html[data-bg='solid'] .aurora > *,
+html[data-bg='image'] .aurora > * {
+  display: none;
+}
+.bg-image {
+  position: fixed;
+  inset: -32px; /* bleed so the blur doesn't fade the edges */
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  filter: blur(var(--bg-image-blur, 6px));
+  animation: fadeIn 0.6s var(--ease-out);
+}
+.bg-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Dim toward the theme's own background, so the light theme fades to white. */
+  background: color-mix(in srgb, var(--bg) calc(var(--bg-image-dim, 0.45) * 100%), transparent);
+}
+
+/* ---------- Motion ---------- */
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+/* Reduced: no ambient loops or cascades, short interactions stay. */
+html[data-motion='reduced'] .aurora *,
+html[data-motion='reduced'] .instance-icon,
+html[data-motion='reduced'] .brand-text,
+html[data-motion='reduced'] .empty h2,
+html[data-motion='reduced']
+  :is(.page-body, .detail-actions, .detail-statgrid, .home-recent-grid, .skin-grid, .theme-grid, .instance-grid, .mod-list)
+  > * {
+  animation: none !important;
+}
+
+/* ---------- Cursor effects off ---------- */
+html[data-cursorfx='off'] :is(.instance-card, .home-recent-card, .detail-tile, .skin-card, .theme-card)::after {
+  display: none;
+}
+
+/* ---------- Compact sidebar ---------- */
+.app {
+  transition: grid-template-columns 0.45s var(--ease-out);
+}
+html[data-sidebar='compact'] .app {
+  grid-template-columns: 76px 1fr;
+}
+html[data-sidebar='compact'] .sidebar {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+html[data-sidebar='compact'] :is(.brand-text, .nav-label, .sidebar-account-meta) {
+  display: none;
+}
+html[data-sidebar='compact'] :is(.sidebar-brand, .nav-item, .sidebar-account) {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+html[data-sidebar='compact'] .status-bar {
+  left: 100px;
+}
+
+/* ---------- Segmented control (ui/Segmented) ---------- */
+.segmented {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--glass-border);
+}
+.segmented button {
+  position: relative;
+  z-index: 1;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.segmented button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--text);
+}
+.segmented button.active {
+  color: #fff;
+}
+.segmented-indicator {
+  background: var(--grad-play);
+  box-shadow: 0 6px 16px -6px rgba(var(--accent-strong-rgb), 0.7);
+}
+[data-theme='light'] .segmented {
+  background: rgba(28, 30, 54, 0.06);
+}
+
+/* ---------- Toggle switch (ui/Toggle) ---------- */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0 0;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: var(--fs-base);
+  font-weight: 500;
+  color: var(--text);
+}
+.toggle-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.toggle-label {
+  font-weight: 600;
+}
+.toggle-desc {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.toggle-switch {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border-strong);
+  transition: background 0.25s, border-color 0.25s;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.4s var(--ease-spring);
+}
+.toggle-input:checked + .toggle-switch {
+  background: var(--grad-play);
+  border-color: transparent;
+}
+.toggle-input:checked + .toggle-switch::after {
+  transform: translateX(18px);
+}
+.toggle-input:focus-visible + .toggle-switch {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+/* ---------- Personalizacja page ---------- */
+.custom-field {
+  margin-top: 16px;
+}
+.custom-value {
+  color: var(--text);
+  font-weight: 700;
+}
+.custom-subtitle {
+  margin-top: 20px;
+}
+.accent-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.accent-swatch,
+.accent-custom {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.2s;
+}
+.accent-swatch:hover:not(:disabled) {
+  transform: scale(1.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.accent-swatch.active {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
+}
+.accent-default {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.accent-default.active {
+  border-color: var(--accent-strong);
+  color: var(--text);
+}
+.accent-custom {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  cursor: pointer;
+  background: conic-gradient(#ef4444, #f59e0b, #84cc16, #06b6d4, #6366f1, #ec4899, #ef4444);
+  text-transform: none;
+}
+.accent-custom svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.accent-custom:hover {
+  transform: scale(1.12);
+}
+.accent-custom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.bg-settings {
+  display: flex;
+  gap: 18px;
+  margin-top: 16px;
+  align-items: flex-start;
+}
+.bg-preview {
+  flex: none;
+  width: 200px;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border-strong);
+  background-size: cover;
+  background-position: center;
+}
+.bg-controls {
+  flex: 1;
+  min-width: 0;
+}
+.section .segmented + .field-hint {
+  margin-top: 10px;
+}

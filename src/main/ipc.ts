@@ -348,6 +348,39 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   );
   ipcMain.handle(IPC.skinsReset, (_e, accountId: string) => resetSkin(accountId));
 
+  // Personalization: custom background image (kept as a single file in the config root)
+  const BG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+  const bgFile = () => BG_EXT.map((e) => path.join(paths.root, `background.${e}`)).find((f) => fs.existsSync(f));
+  const bgDataUrl = (file: string) => {
+    const ext = path.extname(file).slice(1).toLowerCase();
+    const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+    return `data:${mime};base64,${fs.readFileSync(file).toString('base64')}`;
+  };
+  ipcMain.handle(IPC.appearanceBackground, () => {
+    const f = bgFile();
+    return f ? bgDataUrl(f) : null;
+  });
+  ipcMain.handle(IPC.appearancePickBackground, async () => {
+    const win = getMainWindow() ?? undefined;
+    const res = await dialog.showOpenDialog(win!, {
+      title: 'Wybierz obraz tła',
+      properties: ['openFile'],
+      filters: [{ name: 'Obrazy', extensions: BG_EXT }]
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    const src = res.filePaths[0];
+    if (fs.statSync(src).size > 15 * 1024 * 1024) throw new Error('Obraz jest za duży (max 15 MB).');
+    const old = bgFile();
+    if (old) fs.rmSync(old, { force: true });
+    const dest = path.join(paths.root, `background.${path.extname(src).slice(1).toLowerCase()}`);
+    fs.copyFileSync(src, dest);
+    return bgDataUrl(dest);
+  });
+  ipcMain.handle(IPC.appearanceClearBackground, () => {
+    const f = bgFile();
+    if (f) fs.rmSync(f, { force: true });
+  });
+
   // Settings
   ipcMain.handle(IPC.settingsGet, () => getSettings());
   ipcMain.handle(IPC.settingsSet, (_e, patch: Partial<AppSettings>) => {

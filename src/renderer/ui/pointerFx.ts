@@ -23,6 +23,12 @@ export function installPointerFx(): void {
     frame = 0;
     const e = pending;
     if (!e) return;
+    const { cursorfx, motion } = document.documentElement.dataset;
+    if (cursorfx === 'off' || motion === 'off') {
+      if (current) reset(current);
+      current = null;
+      return;
+    }
     const el = (e.target as Element | null)?.closest?.(SPOT) as HTMLElement | null;
     if (current && current !== el) reset(current);
     current = el;

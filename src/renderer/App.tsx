@@ -1,5 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useStore } from './store';
+import { CustomizePage } from './components/CustomizePage';
+import { applyAppearance, auroraBlobStyles } from './appearance';
+import { resolveAppearance } from '../shared/appearance';
 import { Sidebar } from './components/Sidebar';
 import { HomePage } from './components/HomePage';
 import { InstancesPage } from './components/InstancesPage';
@@ -16,18 +19,28 @@ export default function App() {
     useStore();
 
   const settings = useStore((s) => s.settings);
+  const backgroundImage = useStore((s) => s.backgroundImage);
+  const appearance = useMemo(() => resolveAppearance(settings?.appearance), [settings?.appearance]);
 
   useEffect(() => {
     refreshAccounts();
     refreshInstances();
     refreshSettings();
     refreshServers();
+    window.api.appearance.background().then((img) => useStore.setState({ backgroundImage: img }));
   }, []);
 
   // Apply the selected UI theme to <html data-theme="…">.
   useEffect(() => {
     document.documentElement.dataset.theme = settings?.theme || 'default';
   }, [settings?.theme]);
+
+  // Personalization: accent, background, motion, glass, radius, sidebar, zoom.
+  useEffect(() => {
+    if (settings) applyAppearance(appearance);
+  }, [appearance, settings]);
+  const blobs = auroraBlobStyles(appearance.accent);
+  const showImage = appearance.background === 'image' && !!backgroundImage;
 
   // A pack opened via double-click (.zerda file association) is imported by the
   // main process; refresh the list and tell the user when it finishes.
@@ -48,15 +61,20 @@ export default function App() {
   }, [refreshInstances]);
 
   const Aurora = (
-    <div className="aurora" aria-hidden>
-      <span className="aurora-blob a" />
-      <span className="aurora-blob b" />
-      <span className="aurora-blob c" />
-      <span className="aurora-blob d" />
-      <div className="aurora-sweep" />
-      <div className="aurora-grid" />
-      <div className="aurora-stars" />
-    </div>
+    <>
+      <div className="aurora" aria-hidden>
+        <span className="aurora-blob a" style={blobs.a} />
+        <span className="aurora-blob b" />
+        <span className="aurora-blob c" style={blobs.c} />
+        <span className="aurora-blob d" />
+        <div className="aurora-sweep" />
+        <div className="aurora-grid" />
+        <div className="aurora-stars" />
+      </div>
+      {showImage && (
+        <div className="bg-image" aria-hidden style={{ backgroundImage: `url("${backgroundImage}")` }} />
+      )}
+    </>
   );
 
   if (accounts.length === 0) {
@@ -81,6 +99,7 @@ export default function App() {
             {page === 'instances' && <InstancesPage />}
             {page === 'servers' && <ServersPage />}
             {page === 'accounts' && <AccountsPage />}
+            {page === 'customize' && <CustomizePage />}
             {page === 'settings' && <SettingsPage />}
           </div>
         </div>

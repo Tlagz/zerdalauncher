@@ -81,7 +81,8 @@ function createWindow(): void {
 }
 
 // Single instance: opening a second .zerda routes the file to the running app.
-const gotLock = app.requestSingleInstanceLock();
+// A ZERDA_HOME run uses its own data folder, so it may run next to the normal app.
+const gotLock = process.env.ZERDA_HOME ? true : app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {

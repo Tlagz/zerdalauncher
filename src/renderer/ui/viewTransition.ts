@@ -2,7 +2,9 @@ import { flushSync } from 'react-dom';
 
 type TransitionKind = 'page' | 'close';
 
-const reducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Off when the OS asks for less motion or the user set animations to "Wyłączone".
+const reducedMotion = (): boolean =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'off';
 
 /**
  * Applies a React state update inside a View Transition so the DOM change

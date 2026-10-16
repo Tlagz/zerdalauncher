@@ -1,3 +1,5 @@
+import type { Appearance } from './appearance';
+
 export type ModLoader = 'vanilla' | 'fabric' | 'forge' | 'neoforge';
 
 export interface Instance {
@@ -60,8 +62,10 @@ export interface AppSettings {
   curseforgeApiKey: string;
   /** Discord application (client) ID for Rich Presence. Empty = disabled. */
   discordClientId: string;
-  /** UI theme: 'default' | 'crimson' | 'light'. */
+  /** UI theme: 'default' | 'dark' | 'crimson' | 'light'. */
   theme: string;
+  /** Personalization (accent, background, motion, layout); missing keys use defaults. */
+  appearance?: Partial<Appearance>;
 }
 
 /** Mod loader build versions for a given MC version, split into stable/unstable. */

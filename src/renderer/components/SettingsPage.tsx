@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Save,
   Check,
-  Palette,
   Coffee,
   MemoryStick,
   ToggleRight,
@@ -136,40 +135,12 @@ ${pick.target}
       <div className="page-header">
         <div>
           <div className="page-title">Ustawienia</div>
-          <div className="page-subtitle">Domyślne wartości dla nowych instancji</div>
+          <div className="page-subtitle">Java, pamięć, dane i aktualizacje — wygląd zmienisz w Personalizacji</div>
         </div>
         <button className="primary" onClick={save} disabled={busy}>
           {saved ? <Check size={16} /> : <Save size={16} />}
           {saved ? 'Zapisano' : 'Zapisz'}
         </button>
-      </div>
-
-      <div className="section">
-        <h3>
-          <Palette size={16} /> Motyw
-        </h3>
-        <div className="theme-grid">
-          {[
-            { id: 'default', label: 'Domyślny', desc: 'Fiolet + cyan' },
-            { id: 'dark', label: 'Ciemny', desc: 'Czarny + stal' },
-            { id: 'crimson', label: 'Crimson', desc: 'Czerwień + czerń' },
-            { id: 'light', label: 'Jasny', desc: 'Dzienny' }
-          ].map((t) => (
-            <button
-              type="button"
-              key={t.id}
-              className={`theme-card theme-${t.id} ${local.theme === t.id ? 'active' : ''}`}
-              onClick={() => {
-                setLocal({ ...local, theme: t.id });
-                document.documentElement.dataset.theme = t.id;
-              }}
-            >
-              <span className="theme-swatch" />
-              <span className="theme-name">{t.label}</span>
-              <span className="theme-desc">{t.desc}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="section">

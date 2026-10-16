@@ -12,13 +12,15 @@ import type {
 } from '../shared/types';
 
 interface UiState {
-  page: 'home' | 'instances' | 'servers' | 'accounts' | 'settings';
+  page: 'home' | 'instances' | 'servers' | 'accounts' | 'customize' | 'settings';
   setPage: (p: UiState['page']) => void;
 
   instances: Instance[];
   accounts: Account[];
   settings: AppSettings | null;
   activeAccountId: string | null;
+  /** Custom background image (data URL) from the Personalizacja page. */
+  backgroundImage: string | null;
 
   launchProgress: DownloadProgress | null;
   launchStatus: LaunchStatus | null;
@@ -57,6 +59,7 @@ export const useStore = create<UiState>((set) => ({
   accounts: [],
   activeAccountId: null,
   settings: null,
+  backgroundImage: null,
   launchProgress: null,
   launchStatus: null,
   runningGames: [],

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import { IPC } from '../shared/ipc-channels';
 import type {
   Instance,
@@ -263,6 +263,14 @@ const api = {
     apply: (accountId: string, skinId: string): Promise<Account> =>
       ipcRenderer.invoke(IPC.skinsApply, accountId, skinId),
     reset: (accountId: string): Promise<Account> => ipcRenderer.invoke(IPC.skinsReset, accountId)
+  },
+  appearance: {
+    /** Stored custom background as a data URL, or null. */
+    background: (): Promise<string | null> => ipcRenderer.invoke(IPC.appearanceBackground),
+    pickBackground: (): Promise<string | null> => ipcRenderer.invoke(IPC.appearancePickBackground),
+    clearBackground: (): Promise<void> => ipcRenderer.invoke(IPC.appearanceClearBackground),
+    /** UI zoom (1 = 100%); applied to this window only, so it is set on every start. */
+    setZoom: (factor: number): void => webFrame.setZoomFactor(factor)
   },
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.settingsGet),
