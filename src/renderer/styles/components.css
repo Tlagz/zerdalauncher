@@ -1672,7 +1672,7 @@
 /* ---------- Home / recently played ---------- */
 .home-layout {
   display: grid;
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: 1fr 270px;
   gap: 20px;
   align-items: start;
 }

@@ -6,6 +6,9 @@ import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
 import { SkinView } from './SkinView';
 import { SkinLibraryModal } from './SkinLibraryModal';
+import { HomeNews, NewReleaseBanner } from './HomeNews';
+import { HomeStats } from './HomeStats';
+import { HomeServers } from './HomeServers';
 import { alertDialog } from '../ui/feedback';
 import { formatDate, formatPlaytime } from '../format';
 import { transition } from '../ui/viewTransition';
@@ -113,48 +116,56 @@ export function HomePage() {
       <div className="page-header">
         <div>
           <div className="page-title">Start</div>
-          <div className="page-subtitle">Twoja postać i ostatnio grane paczki</div>
+          <div className="page-subtitle">Twoja postać, ostatnio grane paczki i nowości</div>
         </div>
       </div>
 
       {showSkins && active && <SkinLibraryModal account={active} onClose={() => setShowSkins(false)} />}
 
       <div className="home-layout">
-        <div className="section">
-          <h3>Ostatnio grane</h3>
-          {recent.length === 0 ? (
-            <div className="mod-empty">
-              <p>Jeszcze nic nie grane.</p>
-              <button className="ghost" onClick={() => transition(() => setPage('instances'))}>
-                Przejdź do instancji <ArrowRight size={16} />
-              </button>
-            </div>
-          ) : (
-            <div className="home-recent-grid">
-              {recent.map((i) => (
-                <RecentInstanceRow key={i.id} instance={i} />
-              ))}
-            </div>
-          )}
+        <div className="home-main">
+          <NewReleaseBanner />
+          <div className="section">
+            <h3>Ostatnio grane</h3>
+            {recent.length === 0 ? (
+              <div className="mod-empty">
+                <p>Jeszcze nic nie grane.</p>
+                <button className="ghost" onClick={() => transition(() => setPage('instances'))}>
+                  Przejdź do instancji <ArrowRight size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="home-recent-grid">
+                {recent.map((i) => (
+                  <RecentInstanceRow key={i.id} instance={i} />
+                ))}
+              </div>
+            )}
+          </div>
+          <HomeServers />
+          <HomeStats />
         </div>
 
-        {active && (
-          <div className="section home-hero">
-            <div className="skin-type">
-              {active.type === 'microsoft' ? 'Microsoft · Premium' : 'Konto offline'}
+        <div className="home-side">
+          {active && (
+            <div className="section home-hero">
+              <div className="skin-type">
+                {active.type === 'microsoft' ? 'Microsoft · Premium' : 'Konto offline'}
+              </div>
+              <div className="skin-name">{active.username}</div>
+              <div className="skin-stage">
+                <SkinView account={active} key={active.id} width={150} height={210} />
+              </div>
+              <div className="skin-hint">
+                <MousePointer2 size={13} /> Przeciągnij, aby obrócić
+              </div>
+              <button className="primary" onClick={() => setShowSkins(true)}>
+                <Palette size={16} /> Biblioteka skinów
+              </button>
             </div>
-            <div className="skin-name">{active.username}</div>
-            <div className="skin-stage">
-              <SkinView account={active} key={active.id} width={150} height={210} />
-            </div>
-            <div className="skin-hint">
-              <MousePointer2 size={13} /> Przeciągnij, aby obrócić
-            </div>
-            <button className="primary" onClick={() => setShowSkins(true)}>
-              <Palette size={16} /> Biblioteka skinów
-            </button>
-          </div>
-        )}
+          )}
+          <HomeNews />
+        </div>
       </div>
     </>
   );

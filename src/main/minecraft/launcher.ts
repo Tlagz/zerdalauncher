@@ -14,6 +14,8 @@ export interface LaunchOptions {
   onLog?: (line: string) => void;
   /** Launch straight into this saved world (Quick Play), bypassing the main menu. */
   quickPlayWorld?: string;
+  /** Join this server right away (overrides the instance's auto-join address). */
+  quickPlayServer?: string;
 }
 
 export function launchGame(opts: LaunchOptions): ChildProcess {
@@ -57,10 +59,17 @@ export function launchGame(opts: LaunchOptions): ChildProcess {
 
   // Quick Play: jump straight into a saved world, or auto-join a server (MC 1.20+).
   // A chosen world takes priority over the instance's default auto-join server.
+  const server = opts.quickPlayServer?.trim() || instance.serverAddress?.trim();
   if (opts.quickPlayWorld?.trim()) {
     gameArgs.push('--quickPlaySingleplayer', opts.quickPlayWorld.trim());
-  } else if (instance.serverAddress?.trim()) {
-    gameArgs.push('--quickPlayMultiplayer', instance.serverAddress.trim());
+  } else if (server) {
+    if (supportsQuickPlay(instance.mcVersion)) {
+      gameArgs.push('--quickPlayMultiplayer', server);
+    } else {
+      // Before 1.20 the game only knows the older --server/--port pair.
+      const m = server.match(/^(.+?)(?::(\d+))?$/);
+      gameArgs.push('--server', m?.[1] ?? server, '--port', m?.[2] ?? '25565');
+    }
   }
 
   const args = [...jvmArgs, mainClass, ...gameArgs];
@@ -89,6 +98,13 @@ export function launchGame(opts: LaunchOptions): ChildProcess {
     finish(-1);
   });
   return child;
+}
+
+/** Quick Play arrived in 1.20 (and every year-numbered version like 26.x). */
+function supportsQuickPlay(mc: string): boolean {
+  const [major, minor] = mc.split('.').map((n) => parseInt(n, 10));
+  if (isNaN(major) || isNaN(minor)) return true; // snapshots like 24w14a are recent
+  return major > 1 || minor >= 20;
 }
 
 function resolveArgs(

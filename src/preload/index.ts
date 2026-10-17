@@ -26,7 +26,12 @@ import type {
   CrashReport,
   CrashFix,
   ScreenshotInfo,
-  ExportOptions
+  ExportOptions,
+  McNewsEntry,
+  McPatchNotes,
+  PlaySession,
+  SavedServer,
+  ServerPing
 } from '../shared/types';
 import type { PresetLook } from '../shared/appearance';
 
@@ -130,7 +135,7 @@ const api = {
       latest: { release: string; snapshot: string };
       versions: Array<{ id: string; type: string; releaseTime: string }>;
     }> => ipcRenderer.invoke(IPC.mcVersions),
-    launch: (id: string, opts?: { world?: string }): Promise<void> =>
+    launch: (id: string, opts?: { world?: string; server?: string }): Promise<void> =>
       ipcRenderer.invoke(IPC.mcLaunch, id, opts),
     kill: (id: string): Promise<void> => ipcRenderer.invoke(IPC.mcKill, id),
     runningList: (): Promise<string[]> => ipcRenderer.invoke(IPC.mcRunningList),
@@ -320,6 +325,17 @@ const api = {
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.settingsGet),
     set: (patch: Partial<AppSettings>): Promise<AppSettings> => ipcRenderer.invoke(IPC.settingsSet, patch)
+  },
+  news: {
+    minecraft: (): Promise<McNewsEntry[]> => ipcRenderer.invoke(IPC.newsMinecraft),
+    patchNotes: (contentPath: string): Promise<McPatchNotes> => ipcRenderer.invoke(IPC.newsPatchNotes, contentPath)
+  },
+  stats: {
+    playlog: (): Promise<PlaySession[]> => ipcRenderer.invoke(IPC.statsPlaylog)
+  },
+  savedServers: {
+    list: (): Promise<SavedServer[]> => ipcRenderer.invoke(IPC.savedServersList),
+    ping: (address: string): Promise<ServerPing> => ipcRenderer.invoke(IPC.savedServersPing, address)
   },
   system: {
     detectJava: (): Promise<string | null> => ipcRenderer.invoke(IPC.systemDetectJava),

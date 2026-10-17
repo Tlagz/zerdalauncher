@@ -10,6 +10,7 @@ import { alertDialog } from '../ui/feedback';
 import { SearchField } from '../ui/SearchField';
 import { formatPlaytime, plural } from '../format';
 import { transition } from '../ui/viewTransition';
+import { compareMc } from '../mcVersion';
 import type { Instance } from '../../shared/types';
 
 /** Per-viewer UI memory; storage can be unavailable, so every access is guarded. */
@@ -27,18 +28,6 @@ function persist(key: string, value: unknown): void {
   } catch {
     /* ignore */
   }
-}
-
-/** Newest first: "1.20.4" before "1.20" before "1.7.10"; snapshots fall back to text order. */
-function compareMc(a: string, b: string): number {
-  const pa = a.split(/[.-]/).map(Number);
-  const pb = b.split(/[.-]/).map(Number);
-  if (pa.some(isNaN) || pb.some(isNaN)) return b.localeCompare(a);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pb[i] ?? 0) - (pa[i] ?? 0);
-    if (d) return d;
-  }
-  return 0;
 }
 
 const UNGROUPED = '';

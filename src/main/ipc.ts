@@ -20,6 +20,10 @@ import { launchGame } from './minecraft/launcher';
 import { analyzeCrash } from './minecraft/crashAnalyzer';
 import { applyCrashFix } from './minecraft/crashFixes';
 import { latestLoaderVersion } from './modloaders/latest';
+import { minecraftNews, minecraftPatchNotes } from './news';
+import { readPlaylog, logSession } from './minecraft/playlog';
+import { listSavedServers } from './minecraft/savedServers';
+import { pingServer } from './minecraft/serverPing';
 import {
   listScreenshots,
   copyScreenshot,
@@ -473,6 +477,13 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     return next;
   });
 
+  // Home news
+  ipcMain.handle(IPC.newsMinecraft, () => minecraftNews());
+  ipcMain.handle(IPC.newsPatchNotes, (_e, contentPath: string) => minecraftPatchNotes(contentPath));
+  ipcMain.handle(IPC.statsPlaylog, () => readPlaylog());
+  ipcMain.handle(IPC.savedServersList, () => listSavedServers());
+  ipcMain.handle(IPC.savedServersPing, (_e, address: string) => pingServer(address));
+
   // System
   ipcMain.handle(IPC.systemDetectJava, () => detectJava(getSettings().javaPath || undefined));
   ipcMain.handle(IPC.appVersion, () => app.getVersion());
@@ -539,7 +550,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   });
 
   // Launch
-  ipcMain.handle(IPC.mcLaunch, async (_e, instanceId: string, opts?: { world?: string }) => {
+  ipcMain.handle(IPC.mcLaunch, async (_e, instanceId: string, opts?: { world?: string; server?: string }) => {
     const instance = getInstance(instanceId);
     if (!instance) throw new Error('Brak instancji.');
     if (games.has(instanceId) || starting.has(instanceId)) throw new Error('Ta instancja już działa.');
@@ -585,11 +596,13 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
         prepared,
         javaExe,
         quickPlayWorld: opts?.world,
+        quickPlayServer: opts?.server,
         onExit: (code) => {
           games.delete(instanceId);
           emitRunning();
           // Accumulate playtime for stats, drop Discord presence back to idle.
           const inst = getInstance(instance.id);
+          logSession(instance.id, playStart, Date.now() - playStart);
           updateInstance(instance.id, {
             playtimeMs: (inst?.playtimeMs ?? 0) + (Date.now() - playStart),
             lastPlayed: Date.now()

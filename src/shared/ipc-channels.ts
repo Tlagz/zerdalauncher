@@ -118,6 +118,13 @@ export const IPC = {
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
 
+  // Home news
+  newsMinecraft: 'news:minecraft',
+  newsPatchNotes: 'news:patchNotes',
+  statsPlaylog: 'stats:playlog',
+  savedServersList: 'savedServers:list',
+  savedServersPing: 'savedServers:ping',
+
   // System
   systemDetectJava: 'system:detectJava',
   appVersion: 'app:version',

@@ -18,28 +18,9 @@ import {
 import { useStore } from '../store';
 import { alertDialog, confirmDialog } from '../ui/feedback';
 import { formatSize } from '../format';
+import { updateLabel } from '../updateLabel';
 import type { AppSettings, DataLocationInfo, JreStatus } from '../../shared/types';
 
-function updateLabel(s: ReturnType<typeof useStore.getState>['updateStatus']): string {
-  switch (s?.state) {
-    case 'checking':
-      return 'Sprawdzam dostępność aktualizacji…';
-    case 'available':
-      return `Znaleziono wersję ${s.version} — pobieram…`;
-    case 'downloading':
-      return `Pobieranie aktualizacji… ${s.percent}%`;
-    case 'ready':
-      return `Wersja ${s.version} gotowa do instalacji.`;
-    case 'none':
-      return 'Masz najnowszą wersję.';
-    case 'disabled':
-      return 'Auto-aktualizacje działają tylko w zainstalowanej wersji (nie w trybie dev).';
-    case 'error':
-      return `Błąd sprawdzania aktualizacji: ${s.message}`;
-    default:
-      return '';
-  }
-}
 
 export function SettingsPage() {
   const { settings, refreshSettings, updateStatus } = useStore();

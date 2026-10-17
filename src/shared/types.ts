@@ -277,3 +277,52 @@ export interface ExportOptions {
   /** World folder names to include (saves/). */
   worlds: string[];
 }
+
+// --- Home news ---
+/** A Minecraft: Java Edition release or snapshot from Mojang's patch-notes feed. */
+export interface McNewsEntry {
+  title: string;
+  version: string;
+  type: 'release' | 'snapshot';
+  date: string;
+  shortText: string;
+  image?: string;
+  contentPath: string;
+}
+
+export interface McPatchNotes {
+  title: string;
+  version: string;
+  /** HTML from Mojang — sanitized in the renderer before display. */
+  body: string;
+  image?: string;
+}
+
+/** One finished game session (playlog.json), for weekly stats. */
+export interface PlaySession {
+  instanceId: string;
+  start: number;
+  ms: number;
+}
+
+/** A server from an instance's auto-join address or in-game server list. */
+export interface SavedServer {
+  name: string;
+  address: string;
+  icon?: string;
+  /** The most recently played instance that has this server. */
+  instanceId: string;
+  instanceName: string;
+  mcVersion: string;
+}
+
+/** Live status from the Server List Ping. */
+export interface ServerPing {
+  online: boolean;
+  latency?: number;
+  players?: { online: number; max: number };
+  version?: string;
+  motd?: string;
+  favicon?: string;
+  error?: string;
+}

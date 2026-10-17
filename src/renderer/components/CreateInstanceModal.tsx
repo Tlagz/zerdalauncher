@@ -6,9 +6,11 @@ import type { LoaderVersionInfo, ModLoader } from '../../shared/types';
 
 interface Props {
   onClose: () => void;
+  /** Preselect this Minecraft version (e.g. from the news on Home). */
+  initialVersion?: string;
 }
 
-export function CreateInstanceModal({ onClose }: Props) {
+export function CreateInstanceModal({ onClose, initialVersion }: Props) {
   const { refreshInstances, settings } = useStore();
   const [versions, setVersions] = useState<Array<{ id: string; type: string }>>([]);
   const [latest, setLatest] = useState<{ release: string; snapshot: string } | null>(null);
@@ -28,7 +30,9 @@ export function CreateInstanceModal({ onClose }: Props) {
     window.api.mc.versions().then((m) => {
       setVersions(m.versions);
       setLatest(m.latest);
-      setMcVersion(m.latest.release);
+      const wanted = initialVersion && m.versions.find((v) => v.id === initialVersion);
+      if (wanted && wanted.type !== 'release') setShowSnapshots(true);
+      setMcVersion(wanted ? wanted.id : m.latest.release);
     });
   }, []);
 
