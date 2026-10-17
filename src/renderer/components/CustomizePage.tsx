@@ -14,8 +14,11 @@ import {
   Bookmark,
   BookmarkPlus,
   Download,
-  Share2
+  Share2,
+  Volume2,
+  Play
 } from 'lucide-react';
+import { playSound } from '../ui/sounds';
 import { useStore } from '../store';
 import { Segmented } from '../ui/Segmented';
 import { Toggle } from '../ui/Toggle';
@@ -40,6 +43,8 @@ const THEMES = [
 /** Preset previews: each theme's own accent and base color. */
 const THEME_ACCENT: Record<string, string> = { default: '#8b5cf6', dark: '#5b7bb0', crimson: '#ef4444', light: '#6366f1' };
 const THEME_BASE: Record<string, string> = { default: '#1e1b4b', dark: '#08090d', crimson: '#0c0708', light: '#eef0f7' };
+
+const SOUND_LABEL = { click: 'Klik', launch: 'Start gry', success: 'Sukces', error: 'Błąd' } as const;
 
 const ACCENTS = ['#8b5cf6', '#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#84cc16', '#f59e0b', '#f97316', '#ef4444', '#ec4899'];
 
@@ -421,6 +426,39 @@ export function CustomizePage() {
           unit="%"
           onChange={(glass) => update({ glass })}
         />
+      </div>
+
+      <div className="section">
+        <h3>
+          <Volume2 size={16} /> Dźwięki
+        </h3>
+        <Toggle
+          checked={ap.sounds}
+          onChange={(sounds) => update({ sounds })}
+          label="Dźwięki interfejsu w stylu Minecrafta"
+          description="Kliknięcia, level up przy starcie gry, orb XP po sukcesie i „hmm” villagera przy błędzie. Brane z pobranych plików gry."
+        />
+        {ap.sounds && (
+          <div className="sound-row">
+            <Slider
+              label="Głośność"
+              value={ap.soundVolume}
+              min={0}
+              max={100}
+              step={5}
+              unit="%"
+              onChange={(soundVolume) => update({ soundVolume })}
+              onCommit={() => playSound('success', true)}
+            />
+            <div className="sound-test">
+              {(['click', 'launch', 'success', 'error'] as const).map((s) => (
+                <button key={s} type="button" className="ghost btn-sm" onClick={() => setTimeout(() => playSound(s, true), 80)}>
+                  <Play size={12} /> {SOUND_LABEL[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="section">

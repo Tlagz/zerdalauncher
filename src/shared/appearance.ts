@@ -17,6 +17,10 @@ export interface Appearance {
   scale: number;
   radius: 'sharp' | 'normal' | 'round';
   compactSidebar: boolean;
+  /** Minecraft-style UI sounds (clicks, launch, success, errors). */
+  sounds: boolean;
+  /** 0–100 (%). */
+  soundVolume: number;
 }
 
 export const DEFAULT_APPEARANCE: Appearance = {
@@ -30,7 +34,9 @@ export const DEFAULT_APPEARANCE: Appearance = {
   glass: 100,
   scale: 100,
   radius: 'normal',
-  compactSidebar: false
+  compactSidebar: false,
+  sounds: true,
+  soundVolume: 50
 };
 
 export function resolveAppearance(stored?: Partial<Appearance>): Appearance {

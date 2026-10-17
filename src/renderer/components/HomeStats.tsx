@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Clock, CalendarRange, Trophy, Rocket, ChartColumn } from 'lucide-react';
 import { useStore } from '../store';
 import { formatPlaytime, plural } from '../format';
+import { locale } from '../i18n';
 import type { PlaySession } from '../../shared/types';
 
 const DAY = 86_400_000;
@@ -80,7 +81,7 @@ export function HomeStats() {
       <div className="week-chart" role="img" aria-label={`Czas gry w ostatnich 7 dniach: ${time(weekMs)}`}>
         {days.map((d, i) => {
           const date = new Date(d.from);
-          const label = date.toLocaleDateString('pl-PL', { weekday: 'short' });
+          const label = date.toLocaleDateString(locale(), { weekday: 'short' });
           const h = max > 0 ? Math.max(d.ms > 0 ? 4 : 0, (d.ms / max) * 100) : 0;
           return (
             <div
@@ -97,7 +98,7 @@ export function HomeStats() {
                 )}
                 {hover === i && (
                   <div className="week-tip">
-                    <b>{date.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'short' })}</b>
+                    <b>{date.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short' })}</b>
                     <span>
                       {time(d.ms)} · {d.count} {plural(d.count, 'sesja', 'sesje', 'sesji')}
                     </span>

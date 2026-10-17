@@ -21,9 +21,14 @@ import { analyzeCrash } from './minecraft/crashAnalyzer';
 import { applyCrashFix } from './minecraft/crashFixes';
 import { latestLoaderVersion } from './modloaders/latest';
 import { minecraftNews, minecraftPatchNotes } from './news';
+import { uiSounds } from './sounds';
+import { createActivityTracker } from './minecraft/gameActivity';
+import { createInvite, inviteFromClipboard, previewInvite, acceptInvite } from './invites';
 import { readPlaylog, logSession } from './minecraft/playlog';
 import { listSavedServers } from './minecraft/savedServers';
 import { pingServer } from './minecraft/serverPing';
+import * as modrinthApi from './mods/modrinth';
+import * as curseforgeApi from './mods/curseforge';
 import {
   listScreenshots,
   copyScreenshot,
@@ -95,8 +100,9 @@ import {
 } from './server';
 import { initTunnel, startTunnel, stopTunnel } from './server/tunnel';
 import { serverDir } from './utils/paths';
-import type { AppSettings, ContentKind, CrashFix, ExportOptions, Instance } from '../shared/types';
+import type { AppSettings, ContentKind, CrashFix, ExportOptions, Instance, Invite } from '../shared/types';
 import type { ThemePresetFile } from '../shared/appearance';
+import { tr } from '../shared/i18n';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -111,6 +117,9 @@ const DEFAULT_SETTINGS: AppSettings = {
 function getSettings(): AppSettings {
   return { ...DEFAULT_SETTINGS, ...readJson<Partial<AppSettings>>(paths.settings, {}) };
 }
+
+/** Native dialog texts in the UI language (they don't pass through the renderer's translator). */
+const L = (text: string) => tr(text, getSettings().language ?? 'pl');
 
 function emitToAll(channel: string, payload: unknown): void {
   for (const w of BrowserWindow.getAllWindows()) w.webContents.send(channel, payload);
@@ -170,9 +179,9 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.worldsRestore, async (_e, id: string) => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
-      title: 'Przywróć świat z kopii',
+      title: L('Przywróć świat z kopii'),
       properties: ['openFile'],
-      filters: [{ name: 'Kopia świata', extensions: ['zip'] }]
+      filters: [{ name: L('Kopia świata'), extensions: ['zip'] }]
     });
     if (res.canceled || !res.filePaths[0]) return null;
     restoreWorld(id, res.filePaths[0]);
@@ -189,9 +198,9 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.instancesPickIcon, async () => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
-      title: 'Wybierz ikonę instancji',
+      title: L('Wybierz ikonę instancji'),
       properties: ['openFile'],
-      filters: [{ name: 'Obrazy', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
+      filters: [{ name: L('Obrazy'), extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
     });
     if (res.canceled || !res.filePaths[0]) return null;
     const file = res.filePaths[0];
@@ -259,16 +268,22 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.modsPickLocal, async (_e, instanceId: string, kind: ContentKind) => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
-      title: kind === 'mod' ? 'Wybierz mody z komputera (.jar)' : 'Wybierz pliki z komputera (.zip)',
+      title: L(kind === 'mod' ? 'Wybierz mody z komputera (.jar)' : 'Wybierz pliki z komputera (.zip)'),
       properties: ['openFile', 'multiSelections'],
       filters:
         kind === 'mod'
-          ? [{ name: 'Mody (.jar)', extensions: ['jar'] }]
-          : [{ name: 'Paczki (.zip)', extensions: ['zip'] }]
+          ? [{ name: L('Mody (.jar)'), extensions: ['jar'] }]
+          : [{ name: L('Paczki (.zip)'), extensions: ['zip'] }]
     });
     if (res.canceled || res.filePaths.length === 0) return null;
     return addLocalContent(instanceId, kind, res.filePaths);
   });
+  ipcMain.handle(IPC.modsDetails, (_e, provider: string, projectId: string) =>
+    (provider === 'curseforge' ? curseforgeApi : modrinthApi).getProjectDetails(projectId)
+  );
+  ipcMain.handle(IPC.modsChangelog, (_e, provider: string, projectId: string, mc: string, loader: string) =>
+    (provider === 'curseforge' ? curseforgeApi : modrinthApi).getProjectChangelog(projectId, mc, loader)
+  );
   ipcMain.handle(IPC.modsCheckUpdates, (_e, instanceId: string, kind) =>
     checkUpdates(instanceId, kind)
   );
@@ -295,9 +310,9 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.packImport, async () => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
-      title: 'Importuj paczkę',
+      title: L('Importuj paczkę'),
       properties: ['openFile'],
-      filters: [{ name: 'Paczki modów', extensions: ['mrpack', 'zerda', 'zip'] }]
+      filters: [{ name: L('Paczki modów'), extensions: ['mrpack', 'zerda', 'zip'] }]
     });
     if (res.canceled || !res.filePaths[0]) return null;
     return importPackFile(res.filePaths[0], packProgress);
@@ -308,12 +323,12 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     const suggested = (instance?.name ?? 'modpack').replace(/[^\w.-]+/g, '_');
     const ext = opts.format === 'mrpack' ? 'mrpack' : 'zerda';
     const res = await dialog.showSaveDialog(win!, {
-      title: 'Eksportuj paczkę',
+      title: L('Eksportuj paczkę'),
       defaultPath: `${suggested}.${ext}`,
       filters: [
         ext === 'mrpack'
-          ? { name: 'Modpack Modrinth', extensions: ['mrpack'] }
-          : { name: 'Paczka ZerdaLauncher', extensions: ['zerda'] }
+          ? { name: L('Modpack Modrinth'), extensions: ['mrpack'] }
+          : { name: L('Paczka ZerdaLauncher'), extensions: ['zerda'] }
       ]
     });
     if (res.canceled || !res.filePath) return null;
@@ -353,7 +368,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.skinsAdd, async () => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
-      title: 'Wybierz skina (PNG 64×64)',
+      title: L('Wybierz skina (PNG 64×64)'),
       filters: [{ name: 'Skin PNG', extensions: ['png'] }],
       properties: ['openFile', 'multiSelections']
     });
@@ -393,9 +408,9 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.appearancePickBackground, async () => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
-      title: 'Wybierz obraz tła',
+      title: L('Wybierz obraz tła'),
       properties: ['openFile'],
-      filters: [{ name: 'Obrazy', extensions: BG_EXT }]
+      filters: [{ name: L('Obrazy'), extensions: BG_EXT }]
     });
     if (res.canceled || !res.filePaths[0]) return null;
     const src = res.filePaths[0];
@@ -410,15 +425,16 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     const f = bgFile();
     if (f) fs.rmSync(f, { force: true });
   });
+  ipcMain.handle(IPC.appearanceSounds, () => uiSounds());
   // Theme presets as shareable .zerdatheme files (JSON, optionally with the background image).
   ipcMain.handle(
     IPC.appearanceExportPreset,
     async (_e, preset: Pick<ThemePresetFile, 'name' | 'theme' | 'look'>, withImage: boolean) => {
       const win = getMainWindow() ?? undefined;
       const res = await dialog.showSaveDialog(win!, {
-        title: 'Eksportuj motyw',
+        title: L('Eksportuj motyw'),
         defaultPath: `${preset.name.replace(/[^\w.-]+/g, '_') || 'motyw'}.zerdatheme`,
-        filters: [{ name: 'Motyw ZerdaLauncher', extensions: ['zerdatheme'] }]
+        filters: [{ name: L('Motyw ZerdaLauncher'), extensions: ['zerdatheme'] }]
       });
       if (res.canceled || !res.filePath) return null;
       const img = withImage ? bgFile() : undefined;
@@ -437,9 +453,9 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.appearanceImportPreset, async () => {
     const win = getMainWindow() ?? undefined;
     const res = await dialog.showOpenDialog(win!, {
-      title: 'Importuj motyw',
+      title: L('Importuj motyw'),
       properties: ['openFile'],
-      filters: [{ name: 'Motyw ZerdaLauncher', extensions: ['zerdatheme', 'json'] }]
+      filters: [{ name: L('Motyw ZerdaLauncher'), extensions: ['zerdatheme', 'json'] }]
     });
     if (res.canceled || !res.filePaths[0]) return null;
     if (fs.statSync(res.filePaths[0]).size > 25 * 1024 * 1024) throw new Error('Plik motywu jest za duży.');
@@ -481,6 +497,12 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.newsMinecraft, () => minecraftNews());
   ipcMain.handle(IPC.newsPatchNotes, (_e, contentPath: string) => minecraftPatchNotes(contentPath));
   ipcMain.handle(IPC.statsPlaylog, () => readPlaylog());
+  ipcMain.handle(IPC.invitesCreate, (_e, instanceId: string, address: string, name: string, from?: string) =>
+    createInvite(instanceId, address, name, from)
+  );
+  ipcMain.handle(IPC.invitesFromClipboard, () => inviteFromClipboard());
+  ipcMain.handle(IPC.invitesPreview, (_e, invite: Invite) => previewInvite(invite));
+  ipcMain.handle(IPC.invitesAccept, (_e, invite: Invite, instanceId: string | null) => acceptInvite(invite, instanceId, packProgress));
   ipcMain.handle(IPC.savedServersList, () => listSavedServers());
   ipcMain.handle(IPC.savedServersPing, (_e, address: string) => pingServer(address));
 
@@ -532,7 +554,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     if (!useDefault) {
       const win = getMainWindow() ?? undefined;
       const res = await dialog.showOpenDialog(win!, {
-        title: 'Wybierz folder na dane launchera',
+        title: L('Wybierz folder na dane launchera'),
         properties: ['openDirectory', 'createDirectory']
       });
       if (res.canceled || !res.filePaths[0]) return null;
@@ -590,6 +612,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       const settings = getSettings();
       let gameLog = '';
       killed.delete(instanceId);
+      const activity = createActivityTracker({ world: opts?.world, server: opts?.server || instance.serverAddress });
       const child = launchGame({
         instance,
         account: acc,
@@ -627,6 +650,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
         onLog: (line) => {
           process.stdout.write(line);
           gameLog = (gameLog + line).slice(-GAME_LOG_CAP);
+          activity.onLog(line);
           emitToAll(IPC.mcLog, { instanceId, line });
         }
       });
@@ -636,7 +660,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
         lastPlayed: Date.now(),
         sessions: (instance.sessions ?? 0) + 1
       });
-      setPlaying(instance.name, `${instance.mcVersion} · ${instance.loader}`);
+      setPlaying(instance.name, `${instance.mcVersion} · ${instance.loader}`, activity.initial);
       status('running', 'Gra uruchomiona');
     } catch (err) {
       status('error', (err as Error).message);

@@ -16,12 +16,16 @@ import {
   Boxes,
   Palette,
   CornerDownLeft,
+  UserPlus,
   type LucideIcon
 } from 'lucide-react';
 import { useStore, type InstancesAction } from '../store';
 import { transition } from '../ui/viewTransition';
 import { alertDialog } from '../ui/feedback';
 import { InstanceIcon } from './InstanceIcon';
+import { checkClipboardInvite } from '../invites';
+import { showToast } from '../ui/feedback';
+import { t } from '../i18n';
 import type { Instance, WorldInfo } from '../../shared/types';
 
 type Page = ReturnType<typeof useStore.getState>['page'];
@@ -83,6 +87,7 @@ const SECTIONS: Array<{ page: Page; heading: string; label: string; keywords: st
   { page: 'customize', heading: 'Tło', label: 'Tło', keywords: 'obraz aurora tapeta' },
   { page: 'customize', heading: 'Animacje', label: 'Animacje i efekty', keywords: 'ruch szkło kursor' },
   { page: 'customize', heading: 'Układ', label: 'Układ i rozmiar', keywords: 'skala zaokrąglenie pasek' },
+  { page: 'customize', heading: 'Dźwięki', label: 'Dźwięki interfejsu', keywords: 'głośność klik muzyka wycisz' },
   { page: 'customize', heading: 'Moje motywy', label: 'Moje motywy', keywords: 'preset zapisz eksport import' }
 ];
 
@@ -104,8 +109,9 @@ function go(page: Page, after?: () => void) {
 }
 
 function scrollToHeading(text: string) {
-  const h = [...document.querySelectorAll<HTMLElement>('.main .section h3')].find((el) =>
-    el.textContent?.includes(text)
+  // Headings are translated in the English UI.
+  const h = [...document.querySelectorAll<HTMLElement>('.main .section h3')].find(
+    (el) => el.textContent?.includes(text) || el.textContent?.includes(t(text))
   );
   if (!h) return;
   const section = h.closest<HTMLElement>('.section') ?? h;
@@ -188,7 +194,17 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
     out.push(
       { id: 'act:create', label: 'Nowa instancja', section: 'Akcje', icon: Plus, keywords: 'stwórz dodaj', run: () => instancesAction('create') },
       { id: 'act:import', label: 'Importuj paczkę', section: 'Akcje', icon: Import, keywords: 'mrpack zerda zip', run: () => instancesAction('import') },
-      { id: 'act:packs', label: 'Przeglądaj modpacki', section: 'Akcje', icon: Boxes, keywords: 'modrinth curseforge', run: () => instancesAction('modpacks') }
+      { id: 'act:packs', label: 'Przeglądaj modpacki', section: 'Akcje', icon: Boxes, keywords: 'modrinth curseforge', run: () => instancesAction('modpacks') },
+      {
+        id: 'act:invite',
+        label: 'Dołącz z zaproszenia (schowek)',
+        section: 'Akcje',
+        icon: UserPlus,
+        keywords: 'zaproszenie link serwer znajomy',
+        run: async () => {
+          if (!(await checkClipboardInvite(true))) showToast('Najpierw skopiuj wiadomość z zaproszeniem.', 'info');
+        }
+      }
     );
     const byRecent = [...instances].sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0));
     for (const inst of byRecent) {
@@ -275,7 +291,11 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
       );
     }
     return items
-      .map((item) => ({ item, s: Math.max(score(q, item.label), score(q, `${item.hint ?? ''} ${item.keywords ?? ''}`) - 30) }))
+      // Labels match in both languages (the English UI shows translated labels).
+      .map((item) => ({
+        item,
+        s: Math.max(score(q, item.label), score(q, t(item.label)), score(q, `${item.hint ?? ''} ${item.keywords ?? ''}`) - 30)
+      }))
       .filter((r) => r.s >= 0)
       .sort((a, b) => b.s - a.s)
       .slice(0, 40)

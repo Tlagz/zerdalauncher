@@ -19,6 +19,7 @@ import { useStore } from '../store';
 import { alertDialog, confirmDialog } from '../ui/feedback';
 import { formatSize } from '../format';
 import { updateLabel } from '../updateLabel';
+import { Segmented } from '../ui/Segmented';
 import type { AppSettings, DataLocationInfo, JreStatus } from '../../shared/types';
 
 
@@ -214,6 +215,21 @@ ${pick.target}
           />
           Zamknij launcher po uruchomieniu gry
         </label>
+        <div className="custom-field language-field">
+          <label>Język / Language</label>
+          <Segmented
+            value={settings?.language ?? 'pl'}
+            onChange={async (language) => {
+              await window.api.settings.set({ language });
+              // The translator is set up before the first render, so restart the window.
+              location.reload();
+            }}
+            options={[
+              { value: 'pl', label: 'Polski' },
+              { value: 'en', label: 'English' }
+            ]}
+          />
+        </div>
       </div>
 
       <div className="section">

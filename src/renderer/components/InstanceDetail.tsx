@@ -12,6 +12,7 @@ import {
   Trash2,
   Globe,
   Camera,
+  UserPlus,
   type LucideIcon
 } from 'lucide-react';
 import { useStore } from '../store';
@@ -24,6 +25,7 @@ import { EditInstanceModal } from './EditInstanceModal';
 import { WorldsModal } from './WorldsModal';
 import { ExportModal } from './ExportModal';
 import { ScreenshotsModal } from './ScreenshotsModal';
+import { InviteCreateModal } from './InviteCreateModal';
 import { confirmDialog, alertDialog, showToast } from '../ui/feedback';
 import { formatDate, formatPlaytime } from '../format';
 import type { Instance } from '../../shared/types';
@@ -37,6 +39,7 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
   const [showWorlds, setShowWorlds] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showShots, setShowShots] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   // Mod updates found in the background, shown as a badge on the mods tile.
   const [modUpdates, setModUpdates] = useState(0);
   const [modsCheck, setModsCheck] = useState(false);
@@ -98,6 +101,7 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
     { icon: Terminal, label: 'Konsola (logi gry)', onClick: () => setShowConsole(true) },
     { icon: Earth, label: 'Światy i kopie', onClick: () => setShowWorlds(true) },
     { icon: Camera, label: 'Zrzuty ekranu', onClick: () => setShowShots(true) },
+    { icon: UserPlus, label: 'Zaproś znajomego', onClick: () => setShowInvite(true) },
     { icon: SlidersHorizontal, label: 'Ustawienia instancji', onClick: () => setShowEdit(true) },
     { icon: Copy, label: 'Duplikuj instancję', onClick: handleDuplicate },
     {
@@ -186,6 +190,7 @@ export function InstanceDetail({ instance, onBack }: { instance: Instance; onBac
       )}
       {showExport && <ExportModal instance={instance} onClose={() => setShowExport(false)} />}
       {showShots && <ScreenshotsModal instance={instance} onClose={() => setShowShots(false)} />}
+      {showInvite && <InviteCreateModal instances={[instance]} onClose={() => setShowInvite(false)} />}
       {showConsole && <ConsoleModal instance={instance} onClose={() => setShowConsole(false)} />}
       {showEdit && <EditInstanceModal instance={instance} onClose={() => setShowEdit(false)} />}
       {showWorlds && <WorldsModal instance={instance} onClose={() => setShowWorlds(false)} />}

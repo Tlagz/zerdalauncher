@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Square, Copy, Check, Eraser, Globe, Share2, SendHorizontal, Loader2, ExternalLink } from 'lucide-react';
+import { Play, Square, Copy, Check, Eraser, Globe, Share2, SendHorizontal, Loader2, ExternalLink, UserPlus } from 'lucide-react';
+import { InviteCreateModal } from './InviteCreateModal';
 import { openExternal } from '../links';
 import { useStore } from '../store';
 import { useBackdropClose } from '../hooks/useBackdropClose';
@@ -16,6 +17,10 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
   const [cmd, setCmd] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  // Client instances that can join this server (same Minecraft version and loader).
+  const instances = useStore((s) => s.instances);
+  const joinable = instances.filter((i) => i.mcVersion === server.mcVersion && i.loader === server.loader);
   const preRef = useRef<HTMLPreElement>(null);
 
   const state = status?.state ?? 'stopped';
@@ -119,6 +124,16 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
               </button>
             )}
             {tunnelOn && (
+              <button
+                className="ghost"
+                disabled={!joinable.length}
+                title={joinable.length ? 'Link z Twoimi modami, który od razu wpuści znajomego' : `Najpierw utwórz instancję ${server.mcVersion} ${server.loader}`}
+                onClick={() => setInviting(true)}
+              >
+                <UserPlus size={15} /> Zaproś
+              </button>
+            )}
+            {tunnelOn && (
               <button className="ghost" onClick={copyAddress}>
                 {copied ? <Check size={15} /> : <Copy size={15} />}
                 {copied ? 'Skopiowano' : 'Kopiuj adres'}
@@ -166,6 +181,14 @@ export function ServerConsoleModal({ server, onClose }: { server: ServerInstance
           </button>
         </div>
       </div>
+      {inviting && tunnel?.address && (
+        <InviteCreateModal
+          instances={joinable}
+          address={tunnel.address}
+          name={server.name}
+          onClose={() => setInviting(false)}
+        />
+      )}
     </div>,
     document.body
   );

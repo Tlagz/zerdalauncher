@@ -70,6 +70,8 @@ export interface AppSettings {
   appearance?: Partial<Appearance>;
   /** Looks saved by the user on the Personalizacja page. */
   themePresets?: ThemePreset[];
+  /** Interface language (default Polish). */
+  language?: 'pl' | 'en';
 }
 
 /** Mod loader build versions for a given MC version, split into stable/unstable. */
@@ -325,4 +327,63 @@ export interface ServerPing {
   motd?: string;
   favicon?: string;
   error?: string;
+}
+
+/** Full project page shown inside the launcher (Mods → details). */
+export interface ProjectDetails {
+  provider: ModProvider;
+  projectId: string;
+  title: string;
+  summary: string;
+  author?: string;
+  iconUrl?: string;
+  /** Description as Markdown (Modrinth) or HTML (CurseForge) — sanitized in the renderer. */
+  body: string;
+  bodyFormat: 'markdown' | 'html';
+  gallery: Array<{ url: string; title?: string }>;
+  downloads: number;
+  followers?: number;
+  updated?: string;
+  license?: string;
+  categories: string[];
+  links: Array<{ label: string; url: string }>;
+}
+
+/** One entry of a project's changelog (newest versions for the instance). */
+export interface ProjectChange {
+  name: string;
+  date: string;
+  type: 'release' | 'beta' | 'alpha';
+  changelog: string;
+  format: 'markdown' | 'html';
+}
+
+// --- Server invites (zerda://join/…) ---
+export interface Invite {
+  v: 1;
+  /** Server display name and address to join. */
+  name: string;
+  address: string;
+  mc: string;
+  loader: ModLoader;
+  loaderVersion?: string;
+  /** Name for the instance the friend gets. */
+  pack?: string;
+  /** Who sent it (launcher username). */
+  from?: string;
+  /** Modrinth version ids of the mods to install. */
+  mods: string[];
+}
+
+export interface InviteCreated {
+  link: string;
+  modCount: number;
+  /** Enabled mods that aren't on Modrinth, so they can't go into the invite. */
+  skipped: string[];
+}
+
+export interface InvitePreview {
+  mods: Array<{ title: string; version: string }>;
+  /** Existing instances with the same Minecraft version and loader. */
+  matching: string[];
 }

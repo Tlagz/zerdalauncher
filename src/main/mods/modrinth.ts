@@ -1,5 +1,5 @@
 import { getJson, postJson } from '../utils/http';
-import type { ModSearchResult, ModFile, ModDependency } from '../../shared/types';
+import type { ModSearchResult, ModFile, ModDependency, ProjectDetails, ProjectChange } from '../../shared/types';
 
 const API = 'https://api.modrinth.com/v2';
 const UA = 'ZerdaLauncher/0.1.0 (custom Minecraft launcher)';
@@ -222,4 +222,78 @@ export async function projectForModId(modId: string, mcVersion: string, loader: 
 export async function getLatestFile(projectId: string): Promise<ModFile | null> {
   const versions = await getJson<ModrinthVersion[]>(`${API}/project/${projectId}/version`, headers);
   return versions[0] ? toModFile(versions[0]) : null;
+}
+
+// ---------- project page (details view inside the launcher) ----------
+
+export async function getProjectDetails(projectId: string): Promise<ProjectDetails> {
+  const p = await getJson<{
+    id: string;
+    title: string;
+    description: string;
+    body: string;
+    icon_url?: string;
+    downloads: number;
+    followers: number;
+    updated: string;
+    license?: { id: string; name: string };
+    categories: string[];
+    gallery?: Array<{ url: string; title?: string; featured?: boolean }>;
+    source_url?: string;
+    issues_url?: string;
+    wiki_url?: string;
+    discord_url?: string;
+    donation_urls?: Array<{ url: string; platform: string }>;
+  }>(`${API}/project/${encodeURIComponent(projectId)}`, headers);
+  const links = [
+    p.source_url && { label: 'Kod źródłowy', url: p.source_url },
+    p.issues_url && { label: 'Zgłoś błąd', url: p.issues_url },
+    p.wiki_url && { label: 'Wiki', url: p.wiki_url },
+    p.discord_url && { label: 'Discord', url: p.discord_url }
+  ].filter((l): l is { label: string; url: string } => !!l);
+  return {
+    provider: 'modrinth',
+    projectId: p.id,
+    title: p.title,
+    summary: p.description,
+    iconUrl: p.icon_url,
+    body: p.body ?? '',
+    bodyFormat: 'markdown',
+    gallery: [...(p.gallery ?? [])].sort((a, b) => Number(!!b.featured) - Number(!!a.featured)).map((g) => ({ url: g.url, title: g.title })),
+    downloads: p.downloads,
+    followers: p.followers,
+    updated: p.updated,
+    license: p.license?.name || p.license?.id,
+    categories: p.categories,
+    links
+  };
+}
+
+export async function getProjectChangelog(projectId: string, mcVersion: string, loader: string): Promise<ProjectChange[]> {
+  const params = new URLSearchParams();
+  if (mcVersion) params.set('game_versions', JSON.stringify([mcVersion]));
+  const lf = loaderFacet(loader);
+  if (lf) params.set('loaders', JSON.stringify([lf]));
+  const versions = await getJson<Array<ModrinthVersion & { changelog?: string }>>(
+    `${API}/project/${encodeURIComponent(projectId)}/version?${params}`,
+    headers
+  );
+  return versions.slice(0, 12).map((v) => ({
+    name: v.name || v.version_number,
+    date: v.date_published,
+    type: v.version_type,
+    changelog: v.changelog ?? '',
+    format: 'markdown'
+  }));
+}
+
+/** Versions by id (≤100 per request), e.g. the mods listed in an invite. */
+export async function versionsByIds(ids: string[]): Promise<ModFile[]> {
+  const out: ModFile[] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    const res = await getJson<ModrinthVersion[]>(`${API}/versions?ids=${encodeURIComponent(JSON.stringify(chunk))}`, headers);
+    out.push(...res.map(toModFile));
+  }
+  return out;
 }

@@ -1,3 +1,5 @@
+import { locale } from './i18n';
+
 /** "3h 12m" / "45m"; empty below one minute. */
 export function formatPlaytime(ms?: number): string {
   if (!ms || ms < 60000) return '';
@@ -32,5 +34,5 @@ export function plural(n: number, one: string, few: string, many: string): strin
 /** "15 paź 2026"; empty when unknown. */
 export function formatDate(ms?: number): string {
   if (!ms) return '';
-  return new Date(ms).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(ms).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }

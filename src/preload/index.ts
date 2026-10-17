@@ -31,7 +31,12 @@ import type {
   McPatchNotes,
   PlaySession,
   SavedServer,
-  ServerPing
+  ServerPing,
+  ProjectDetails,
+  ProjectChange,
+  Invite,
+  InviteCreated,
+  InvitePreview
 } from '../shared/types';
 import type { PresetLook } from '../shared/appearance';
 
@@ -237,6 +242,11 @@ const api = {
       ipcRenderer.invoke(IPC.modsAddLocal, instanceId, kind, filePaths),
     pickLocal: (instanceId: string, kind: ContentKind): Promise<InstalledMod[] | null> =>
       ipcRenderer.invoke(IPC.modsPickLocal, instanceId, kind),
+    details: (provider: ModProvider, projectId: string): Promise<ProjectDetails> =>
+      ipcRenderer.invoke(IPC.modsDetails, provider, projectId),
+    /** Newest versions' changelogs for this MC version/loader (loader '' for packs and shaders). */
+    changelog: (provider: ModProvider, projectId: string, mc: string, loader: string): Promise<ProjectChange[]> =>
+      ipcRenderer.invoke(IPC.modsChangelog, provider, projectId, mc, loader),
     checkUpdates: (instanceId: string, kind: ContentKind): Promise<ContentUpdate[]> =>
       ipcRenderer.invoke(IPC.modsCheckUpdates, instanceId, kind),
     update: (
@@ -310,6 +320,8 @@ const api = {
     background: (): Promise<string | null> => ipcRenderer.invoke(IPC.appearanceBackground),
     pickBackground: (): Promise<string | null> => ipcRenderer.invoke(IPC.appearancePickBackground),
     clearBackground: (): Promise<void> => ipcRenderer.invoke(IPC.appearanceClearBackground),
+    /** UI sounds (data URLs) taken from the downloaded Minecraft assets. */
+    sounds: (): Promise<Record<string, string>> => ipcRenderer.invoke(IPC.appearanceSounds),
     exportPreset: (preset: { name: string; theme: string; look: PresetLook }, withImage: boolean): Promise<string | null> =>
       ipcRenderer.invoke(IPC.appearanceExportPreset, preset, withImage),
     /** Reads a .zerdatheme; an embedded image is stored as the current background. */
@@ -329,6 +341,24 @@ const api = {
   news: {
     minecraft: (): Promise<McNewsEntry[]> => ipcRenderer.invoke(IPC.newsMinecraft),
     patchNotes: (contentPath: string): Promise<McPatchNotes> => ipcRenderer.invoke(IPC.newsPatchNotes, contentPath)
+  },
+  invites: {
+    create: (instanceId: string, address: string, name: string, from?: string): Promise<InviteCreated> =>
+      ipcRenderer.invoke(IPC.invitesCreate, instanceId, address, name, from),
+    /** An invite link currently in the clipboard, if any. */
+    fromClipboard: (): Promise<{ invite: Invite; link: string } | null> => ipcRenderer.invoke(IPC.invitesFromClipboard),
+    preview: (invite: Invite): Promise<InvitePreview> => ipcRenderer.invoke(IPC.invitesPreview, invite),
+    /** Prepares the instance (creates it or updates mods); progress via modpacks.onProgress. */
+    accept: (invite: Invite, instanceId: string | null): Promise<string> =>
+      ipcRenderer.invoke(IPC.invitesAccept, invite, instanceId),
+    /** A zerda://join link opened from outside (browser, double-click). */
+    onOpened: (cb: (r: { invite: Invite; link: string }) => void): (() => void) => {
+      const fn = (_: unknown, r: { invite: Invite; link: string }) => cb(r);
+      ipcRenderer.on(IPC.invitesOpened, fn);
+      return () => {
+        ipcRenderer.off(IPC.invitesOpened, fn);
+      };
+    }
   },
   stats: {
     playlog: (): Promise<PlaySession[]> => ipcRenderer.invoke(IPC.statsPlaylog)

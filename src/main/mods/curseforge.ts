@@ -1,7 +1,7 @@
 import { getJson, postJson } from '../utils/http';
 import { readJson } from '../utils/store';
 import { paths } from '../utils/paths';
-import type { AppSettings, ModSearchResult, ModFile, ModDependency } from '../../shared/types';
+import type { AppSettings, ModSearchResult, ModFile, ModDependency, ProjectDetails, ProjectChange } from '../../shared/types';
 
 const API = 'https://api.curseforge.com/v1';
 const GAME_ID = 432; // Minecraft
@@ -222,4 +222,56 @@ export async function getLatestFile(projectId: string): Promise<ModFile | null> 
     headers()
   );
   return data.data[0] ? toModFile(data.data[0]) : null;
+}
+
+// ---------- project page (details view inside the launcher) ----------
+
+export async function getProjectDetails(projectId: string): Promise<ProjectDetails> {
+  const [{ data: m }, desc] = await Promise.all([
+    getJson<{
+      data: CfMod & {
+        dateModified?: string;
+        links?: { websiteUrl?: string; wikiUrl?: string; issuesUrl?: string; sourceUrl?: string };
+        screenshots?: Array<{ url: string; title?: string }>;
+      };
+    }>(`${API}/mods/${projectId}`, headers()),
+    getJson<{ data: string }>(`${API}/mods/${projectId}/description`, headers()).catch(() => ({ data: '' }))
+  ]);
+  const links = [
+    m.links?.sourceUrl && { label: 'Kod źródłowy', url: m.links.sourceUrl },
+    m.links?.issuesUrl && { label: 'Zgłoś błąd', url: m.links.issuesUrl },
+    m.links?.wikiUrl && { label: 'Wiki', url: m.links.wikiUrl }
+  ].filter((l): l is { label: string; url: string } => !!l);
+  return {
+    provider: 'curseforge',
+    projectId: String(m.id),
+    title: m.name,
+    summary: m.summary,
+    author: m.authors?.[0]?.name,
+    iconUrl: m.logo?.url,
+    body: desc.data ?? '',
+    bodyFormat: 'html',
+    gallery: (m.screenshots ?? []).map((s) => ({ url: s.url, title: s.title })),
+    downloads: m.downloadCount ?? 0,
+    updated: m.dateModified,
+    categories: (m.categories ?? []).map((c) => c.name),
+    links
+  };
+}
+
+export async function getProjectChangelog(projectId: string, mcVersion: string, loader: string): Promise<ProjectChange[]> {
+  const params = new URLSearchParams({ pageSize: '6' });
+  if (mcVersion) params.set('gameVersion', mcVersion);
+  const lt = loaderType(loader);
+  if (lt != null) params.set('modLoaderType', String(lt));
+  const { data } = await getJson<{ data: CfFile[] }>(`${API}/mods/${projectId}/files?${params}`, headers());
+  return Promise.all(
+    data.map(async (f) => {
+      const log = await getJson<{ data: string }>(`${API}/mods/${projectId}/files/${f.id}/changelog`, headers()).catch(
+        () => ({ data: '' })
+      );
+      const mf = toModFile(f);
+      return { name: mf.displayName, date: mf.datePublished, type: mf.releaseType, changelog: log.data ?? '', format: 'html' as const };
+    })
+  );
 }

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Server, RefreshCw, Users, LogIn, Loader2, WifiOff, ChevronDown } from 'lucide-react';
+import { Server, RefreshCw, Users, LogIn, Loader2, WifiOff, ChevronDown, UserPlus } from 'lucide-react';
+import { InviteCreateModal } from './InviteCreateModal';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
+import { locale } from '../i18n';
 import type { Instance, SavedServer, ServerPing } from '../../shared/types';
 
 const SHOWN = 4;
@@ -20,6 +22,7 @@ function ServerRow({ server, ping, instance }: { server: SavedServer; ping?: Ser
     instance ?? ({ id: server.instanceId, name: server.instanceName } as Instance)
   );
   const icon = ping?.favicon ?? server.icon;
+  const [inviting, setInviting] = useState(false);
   return (
     <div className={`server-row ${ping && !ping.online ? 'offline' : ''}`}>
       {icon ? (
@@ -44,8 +47,8 @@ function ServerRow({ server, ping, instance }: { server: SavedServer; ping?: Ser
           <>
             {ping.players && (
               <span className="server-players" title="Graczy online">
-                <Users size={13} /> {ping.players.online.toLocaleString('pl-PL')}
-                <span className="text-faint">/{ping.players.max.toLocaleString('pl-PL')}</span>
+                <Users size={13} /> {ping.players.online.toLocaleString(locale())}
+                <span className="text-faint">/{ping.players.max.toLocaleString(locale())}</span>
               </span>
             )}
             <span className={`server-latency ${latencyClass(ping.latency)}`} title="Opóźnienie">
@@ -59,6 +62,22 @@ function ServerRow({ server, ping, instance }: { server: SavedServer; ping?: Ser
           </span>
         )}
       </div>
+      <button
+        className="ghost icon-btn"
+        disabled={!instance}
+        title="Zaproś znajomego na ten serwer"
+        onClick={() => setInviting(true)}
+      >
+        <UserPlus size={15} />
+      </button>
+      {inviting && instance && (
+        <InviteCreateModal
+          instances={[instance]}
+          address={server.address}
+          name={server.name}
+          onClose={() => setInviting(false)}
+        />
+      )}
       <button
         className="ghost btn-sm"
         disabled={!instance || isLaunching || isRunning}

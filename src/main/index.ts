@@ -11,6 +11,7 @@ import { killAllServers } from './server';
 import { stopAllTunnels } from './server/tunnel';
 import { IPC } from '../shared/ipc-channels';
 import { registerShotScheme, registerShotProtocol } from './minecraft/screenshots';
+import { findInvite } from './invites';
 
 // Custom schemes must be declared before the app is ready.
 registerShotScheme();
@@ -23,6 +24,19 @@ function findPackArg(argv: string[]): string | null {
     if (/\.(zerda|mrpack|zip)$/i.test(a) && fs.existsSync(a)) return a;
   }
   return null;
+}
+
+/** A zerda://join/… invite link the OS handed us (clicked in a browser, etc.). */
+function findInviteArg(argv: string[]): string | null {
+  return argv.find((a) => a.startsWith('zerda://')) ?? null;
+}
+
+function openInvite(link: string): void {
+  const invite = findInvite(link);
+  if (!invite || !mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.focus();
+  mainWindow.webContents.send(IPC.invitesOpened, { invite, link });
 }
 
 /** Import a pack file that the OS handed us (file association / "open with"). */
@@ -64,16 +78,19 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => mainWindow?.show());
 
+  // Only web links go to the system browser (mod pages contain third-party links).
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
 
   // Once the renderer is ready: import a double-clicked .zerda (if any) and
   // kick off a background update check.
   const initialFile = findPackArg(process.argv.slice(1));
+  const initialInvite = findInviteArg(process.argv.slice(1));
   mainWindow.webContents.once('did-finish-load', () => {
     if (initialFile) void importExternalPack(initialFile);
+    if (initialInvite) openInvite(initialInvite);
     checkForUpdates();
   });
 
@@ -92,11 +109,13 @@ if (!gotLock) {
 } else {
   app.on('second-instance', (_e, argv) => {
     const file = findPackArg(argv.slice(1));
+    const invite = findInviteArg(argv.slice(1));
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
     if (file) void importExternalPack(file);
+    if (invite) openInvite(invite);
   });
 
   // macOS "open-with" (harmless on Windows).
@@ -107,6 +126,8 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    // zerda://join/… invite links open the installed launcher (never a dev/test copy).
+    if (app.isPackaged && !process.env.ZERDA_HOME) app.setAsDefaultProtocolClient('zerda');
     ensureDirs();
     migrateInstanceFolders();
     initUpdater(() => mainWindow);

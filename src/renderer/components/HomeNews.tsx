@@ -9,6 +9,7 @@ import { CHANGELOG } from '../changelog';
 import { updateLabel } from '../updateLabel';
 import { formatDate } from '../format';
 import { isNewerMc } from '../mcVersion';
+import { safeFragment } from '../ui/safeHtml';
 import type { McNewsEntry, McPatchNotes } from '../../shared/types';
 
 // Fetched once per session; Home remounts on every visit.
@@ -95,31 +96,6 @@ export function NewReleaseBanner() {
   );
 }
 
-const ALLOWED = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'B', 'STRONG', 'I', 'EM', 'CODE', 'BR', 'BLOCKQUOTE', 'PRE', 'SPAN', 'A']);
-const DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'IMG', 'VIDEO', 'SVG', 'FORM']);
-
-/** Rebuild Mojang's HTML from a tag whitelist with no attributes at all (links become plain text). */
-function sanitize(html: string): DocumentFragment {
-  const src = new DOMParser().parseFromString(html, 'text/html').body;
-  const out = document.createDocumentFragment();
-  const walk = (from: Node, to: Node) => {
-    for (const n of from.childNodes) {
-      if (n.nodeType === Node.TEXT_NODE) to.appendChild(document.createTextNode(n.textContent ?? ''));
-      else if (n.nodeType === Node.ELEMENT_NODE) {
-        const tag = (n as Element).tagName;
-        if (DROP.has(tag)) continue;
-        if (ALLOWED.has(tag)) {
-          const el = document.createElement(tag === 'A' ? 'span' : tag);
-          walk(n, el);
-          to.appendChild(el);
-        } else walk(n, to);
-      }
-    }
-  };
-  walk(src, out);
-  return out;
-}
-
 function PatchNotesModal({ entry, onClose }: { entry: McNewsEntry; onClose: () => void }) {
   const [notes, setNotes] = useState<McPatchNotes | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +106,7 @@ function PatchNotesModal({ entry, onClose }: { entry: McNewsEntry; onClose: () =
     window.api.news.patchNotes(entry.contentPath).then(setNotes, (e) => setError((e as Error).message));
   }, [entry.contentPath]);
   useEffect(() => {
-    if (notes && bodyRef.current) bodyRef.current.replaceChildren(sanitize(notes.body));
+    if (notes && bodyRef.current) bodyRef.current.replaceChildren(safeFragment(notes.body));
   }, [notes]);
 
   return createPortal(

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useStore } from './store';
 import { CustomizePage } from './components/CustomizePage';
 import { applyAppearance, auroraBlobStyles } from './appearance';
+import { configureSounds, initUiSounds } from './ui/sounds';
 import { resolveAppearance } from '../shared/appearance';
 import { Sidebar } from './components/Sidebar';
 import { HomePage } from './components/HomePage';
@@ -14,6 +15,8 @@ import { StatusBar } from './components/StatusBar';
 import { UpdateBanner } from './components/UpdateBanner';
 import { CrashModal } from './components/CrashModal';
 import { CommandPalette } from './components/CommandPalette';
+import { InviteModal } from './components/InviteModal';
+import { checkClipboardInvite } from './invites';
 import { FeedbackHost, alertDialog, showToast } from './ui/feedback';
 
 export default function App() {
@@ -23,6 +26,14 @@ export default function App() {
   const settings = useStore((s) => s.settings);
   const backgroundImage = useStore((s) => s.backgroundImage);
   const crash = useStore((s) => s.crash);
+  const invite = useStore((s) => s.invite);
+
+  // An invite copied from Discord shows up when the user switches to the launcher.
+  useEffect(() => {
+    const onFocus = () => void checkClipboardInvite();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
   const appearance = useMemo(() => resolveAppearance(settings?.appearance), [settings?.appearance]);
 
   useEffect(() => {
@@ -41,6 +52,8 @@ export default function App() {
   // Personalization: accent, background, motion, glass, radius, sidebar, zoom.
   useEffect(() => {
     if (settings) applyAppearance(appearance);
+    configureSounds(appearance.sounds, appearance.soundVolume);
+    initUiSounds();
   }, [appearance, settings]);
   const blobs = auroraBlobStyles(appearance.accent);
   const showImage = appearance.background === 'image' && !!backgroundImage;
@@ -110,6 +123,7 @@ export default function App() {
       </div>
       {crash && <CrashModal key={crash.instanceId + crash.logTail.length} report={crash} onClose={() => useStore.setState({ crash: null })} />}
       <CommandPalette />
+      {invite && <InviteModal key={invite.link} invite={invite.invite} onClose={() => useStore.setState({ invite: null })} />}
       <FeedbackHost />
     </>
   );

@@ -78,6 +78,8 @@ export const IPC = {
   modsCheckUpdates: 'mods:checkUpdates',
   modsUpdate: 'mods:update',
   modsFetchIcons: 'mods:fetchIcons',
+  modsDetails: 'mods:details',
+  modsChangelog: 'mods:changelog',
 
   // Modpacks
   modpacksSearch: 'modpacks:search',
@@ -112,6 +114,7 @@ export const IPC = {
   appearancePickBackground: 'appearance:pickBackground',
   appearanceClearBackground: 'appearance:clearBackground',
   appearanceExportPreset: 'appearance:exportPreset',
+  appearanceSounds: 'appearance:sounds',
   appearanceImportPreset: 'appearance:importPreset',
 
   // Settings
@@ -122,6 +125,11 @@ export const IPC = {
   newsMinecraft: 'news:minecraft',
   newsPatchNotes: 'news:patchNotes',
   statsPlaylog: 'stats:playlog',
+  invitesCreate: 'invites:create',
+  invitesFromClipboard: 'invites:fromClipboard',
+  invitesPreview: 'invites:preview',
+  invitesAccept: 'invites:accept',
+  invitesOpened: 'invites:opened',
   savedServersList: 'savedServers:list',
   savedServersPing: 'savedServers:ping',
 

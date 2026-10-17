@@ -1,6 +1,17 @@
 /** What changed in each launcher version, newest first. Add an entry with every release. */
 export const CHANGELOG: Array<{ version: string; date: string; changes: string[] }> = [
   {
+    version: '0.1.26',
+    date: '2026-10-17',
+    changes: [
+      'Zaproszenia na serwer: znajomy dostaje Twoje mody i od razu wchodzi do gry',
+      'Szczegóły modów w launcherze: opis, galeria i lista zmian',
+      'Dźwięki interfejsu w stylu Minecrafta (Personalizacja → Dźwięki)',
+      'Discord pokazuje serwer lub świat, na którym grasz, i liczbę graczy',
+      'Angielska wersja interfejsu (Ustawienia → Język)'
+    ]
+  },
+  {
     version: '0.1.25',
     date: '2026-10-17',
     changes: [

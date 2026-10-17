@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { playSound } from './ui/sounds';
 import type {
   Account,
   Instance,
@@ -9,7 +10,8 @@ import type {
   ServerInstance,
   ServerStatus,
   TunnelStatus,
-  CrashReport
+  CrashReport,
+  Invite
 } from '../shared/types';
 
 /** Instances-page actions other places can trigger (e.g. the Ctrl+K palette). */
@@ -39,6 +41,8 @@ interface UiState {
   openInstance: (id: string | null) => void;
   pendingAction: InstancesAction | null;
   paletteOpen: boolean;
+  /** A server invite to show (opened via zerda:// or found in the clipboard). */
+  invite: { invite: Invite; link: string } | null;
 
   /** Game console output per instance id (capped buffer). */
   logs: Record<string, string>;
@@ -81,6 +85,7 @@ export const useStore = create<UiState>((set) => ({
   openInstance: (id) => set({ selectedInstanceId: id, ...(id ? { page: 'instances' as const } : {}) }),
   pendingAction: null,
   paletteOpen: false,
+  invite: null,
   logs: {},
   clearLogs: (instanceId) =>
     set((s) => ({ logs: { ...s.logs, [instanceId]: '' } })),
@@ -106,10 +111,17 @@ export const useStore = create<UiState>((set) => ({
 }));
 
 window.api.mc.onProgress((p) => useStore.setState({ launchProgress: p }));
-window.api.mc.onStatus((s) => useStore.setState({ launchStatus: s }));
+window.api.mc.onStatus((s) => {
+  if (s.state === 'running') playSound('launch');
+  useStore.setState({ launchStatus: s });
+});
 window.api.mc.onRunning((ids) => useStore.setState({ runningGames: ids }));
 window.api.mc.runningList().then((ids) => useStore.setState({ runningGames: ids }));
-window.api.mc.onCrash((crash) => useStore.setState({ crash }));
+window.api.invites.onOpened((invite) => useStore.setState({ invite }));
+window.api.mc.onCrash((crash) => {
+  playSound('error');
+  useStore.setState({ crash });
+});
 window.api.mc.onLog(({ instanceId, line }) =>
   useStore.setState((s) => {
     const next = ((s.logs[instanceId] ?? '') + line).slice(-LOG_CAP);

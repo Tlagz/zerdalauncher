@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { SourceSwitch } from './SourceSwitch';
 import { VersionPickerModal } from './VersionPickerModal';
+import { ModDetailsModal } from './ModDetailsModal';
 import { useBackdropClose } from '../hooks/useBackdropClose';
 import { confirmDialog, showToast } from '../ui/feedback';
 import { ModalHeader } from '../ui/ModalHeader';
@@ -112,6 +113,8 @@ export function ContentManagerModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<ModSearchResult | null>(null);
+  // Project page shown inside the launcher (from a search result or an installed item).
+  const [detailsFor, setDetailsFor] = useState<{ provider: ModProvider; projectId: string; slug?: string; result?: ModSearchResult } | null>(null);
   const [updates, setUpdates] = useState<ContentUpdate[]>([]);
   const [checking, setChecking] = useState(false);
   const [busyFile, setBusyFile] = useState<string | null>(null);
@@ -354,13 +357,24 @@ export function ContentManagerModal({
                     const already = installedProjectIds.has(r.projectId);
                     return (
                       <div className="mod-row" key={`${r.provider}:${r.projectId}`}>
-                        {r.iconUrl ? (
-                          <img className="mod-icon" src={r.iconUrl} alt="" loading="lazy" />
-                        ) : (
-                          <KindPlaceholder kind={kind} />
-                        )}
+                        <button
+                          className="mod-open"
+                          title="Szczegóły"
+                          onClick={() => setDetailsFor({ provider: r.provider, projectId: r.projectId, slug: r.slug, result: r })}
+                        >
+                          {r.iconUrl ? (
+                            <img className="mod-icon" src={r.iconUrl} alt="" loading="lazy" />
+                          ) : (
+                            <KindPlaceholder kind={kind} />
+                          )}
+                        </button>
                         <div className="mod-info">
-                          <div className="mod-title">{r.title}</div>
+                          <button
+                            className="mod-title mod-title-link"
+                            onClick={() => setDetailsFor({ provider: r.provider, projectId: r.projectId, slug: r.slug, result: r })}
+                          >
+                            {r.title}
+                          </button>
                           <div className="mod-desc">{r.description}</div>
                           <div className="mod-sub">
                             <span className={`src-badge ${r.provider}`}>
@@ -469,7 +483,16 @@ export function ContentManagerModal({
                       <span className={`mod-state-dot ${m.enabled ? 'on' : 'off'}`} />
                     </div>
                     <div className="mod-info">
-                      <div className="mod-title">{m.title ?? m.fileName}</div>
+                      {m.provider && m.projectId ? (
+                        <button
+                          className="mod-title mod-title-link"
+                          onClick={() => setDetailsFor({ provider: m.provider!, projectId: m.projectId! })}
+                        >
+                          {m.title ?? m.fileName}
+                        </button>
+                      ) : (
+                        <div className="mod-title">{m.title ?? m.fileName}</div>
+                      )}
                       <div className="mod-sub">
                         {m.fileName} {m.size ? '· ' + formatSize(m.size) : ''}
                       </div>
@@ -507,6 +530,18 @@ export function ContentManagerModal({
         )}
       </div>
 
+      {detailsFor && (
+        <ModDetailsModal
+          provider={detailsFor.provider}
+          projectId={detailsFor.projectId}
+          slug={detailsFor.slug}
+          kind={kind}
+          instance={instance}
+          installed={!detailsFor.result || installedProjectIds.has(detailsFor.projectId)}
+          onInstall={() => detailsFor.result && setPickerFor(detailsFor.result)}
+          onClose={() => setDetailsFor(null)}
+        />
+      )}
       {pickerFor && (
         <VersionPickerModal
           title={pickerFor.title}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { transition } from './viewTransition';
 import { Info, CircleCheck, TriangleAlert, Trash2, type LucideIcon } from 'lucide-react';
 import { useBackdropClose } from '../hooks/useBackdropClose';
+import { playSound } from './sounds';
 
 export type Tone = 'info' | 'success' | 'error';
 
@@ -79,6 +80,7 @@ export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
 /** Show a blocking message with a single OK button (used for errors). */
 export function alertDialog(options: AlertOptions | string): Promise<void> {
   const opts: AlertOptions = typeof options === 'string' ? { message: options } : options;
+  if (opts.tone === 'error') playSound('error');
   return new Promise((resolve) => {
     useFeedback.getState().push({ kind: 'alert', options: opts, resolve: () => resolve() });
   });
@@ -86,6 +88,7 @@ export function alertDialog(options: AlertOptions | string): Promise<void> {
 
 /** Show a transient, non-blocking toast (used for success / minor info). */
 export function showToast(message: string, tone: Tone = 'success'): void {
+  playSound(tone === 'success' ? 'success' : tone === 'error' ? 'error' : 'toast');
   useFeedback.getState().addToast(message, tone);
 }
 
