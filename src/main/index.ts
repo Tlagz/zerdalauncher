@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, protocol } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { ensureDirs } from './utils/paths';
@@ -10,11 +10,19 @@ import { initDiscord } from './discord';
 import { killAllServers } from './server';
 import { stopAllTunnels } from './server/tunnel';
 import { IPC } from '../shared/ipc-channels';
-import { registerShotScheme, registerShotProtocol } from './minecraft/screenshots';
+import { SHOT_SCHEME, registerShotProtocol } from './minecraft/screenshots';
+import { MAP_SCHEME, registerMapProtocol } from './map';
 import { findInvite } from './invites';
+import { initTray, quitting, trayNotice } from './tray';
+import { runningGameIds, killGame } from './ipc';
 
-// Custom schemes must be declared before the app is ready.
-registerShotScheme();
+// Custom schemes must be declared before the app is ready — all in one call.
+protocol.registerSchemesAsPrivileged(
+  [SHOT_SCHEME, MAP_SCHEME].map((scheme) => ({
+    scheme,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+  }))
+);
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -78,6 +86,19 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => mainWindow?.show());
 
+  // Closing the window while a game runs keeps the launcher in the tray (crash
+  // detection, playtime and Discord status keep working).
+  let trayHintShown = false;
+  mainWindow.on('close', (e) => {
+    if (quitting || !runningGameIds().length) return;
+    e.preventDefault();
+    mainWindow?.hide();
+    if (!trayHintShown) {
+      trayHintShown = true;
+      trayNotice('ZerdaLauncher działa w zasobniku', 'Gra jest uruchomiona. Kliknij ikonę, aby wrócić do launchera.');
+    }
+  });
+
   // Only web links go to the system browser (mod pages contain third-party links).
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
@@ -134,7 +155,9 @@ if (!gotLock) {
     void initDiscord();
     registerIpc(() => mainWindow);
     registerShotProtocol();
+    registerMapProtocol();
     createWindow();
+    initTray({ getWindow: () => mainWindow, runningGames: runningGameIds, stopGame: killGame });
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });

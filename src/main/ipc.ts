@@ -24,6 +24,9 @@ import { minecraftNews, minecraftPatchNotes } from './news';
 import { uiSounds } from './sounds';
 import { createActivityTracker } from './minecraft/gameActivity';
 import { createInvite, inviteFromClipboard, previewInvite, acceptInvite } from './invites';
+import { monitorGame } from './minecraft/gameMonitor';
+import { setTrayTooltip, showWindow, trayNotice } from './tray';
+import { openMap } from './map';
 import { readPlaylog, logSession } from './minecraft/playlog';
 import { listSavedServers } from './minecraft/savedServers';
 import { pingServer } from './minecraft/serverPing';
@@ -31,6 +34,7 @@ import * as modrinthApi from './mods/modrinth';
 import * as curseforgeApi from './mods/curseforge';
 import {
   listScreenshots,
+  listAllScreenshots,
   copyScreenshot,
   deleteScreenshot,
   revealScreenshot,
@@ -100,7 +104,7 @@ import {
 } from './server';
 import { initTunnel, startTunnel, stopTunnel } from './server/tunnel';
 import { serverDir } from './utils/paths';
-import type { AppSettings, ContentKind, CrashFix, ExportOptions, Instance, Invite } from '../shared/types';
+import type { AppSettings, ContentKind, CrashFix, ExportOptions, Instance, Invite, MapTarget } from '../shared/types';
 import type { ThemePresetFile } from '../shared/appearance';
 import { tr } from '../shared/i18n';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
@@ -132,6 +136,18 @@ const starting = new Set<string>();
 const emitRunning = () => emitToAll(IPC.mcRunning, [...games.keys()]);
 // Games the user stopped with "Zabij grę" — their exit isn't a crash.
 const killed = new Set<string>();
+// The window was hidden to the tray because a game started (Settings → hide while playing).
+let hiddenForGame = false;
+
+export const runningGameIds = (): string[] => [...games.keys()];
+
+/** Stop a running game on purpose (not reported as a crash). */
+export function killGame(instanceId: string): void {
+  const child = games.get(instanceId);
+  if (!child) return;
+  killed.add(instanceId);
+  child.kill();
+}
 const GAME_LOG_CAP = 600_000;
 
 export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
@@ -190,6 +206,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
 
   // Screenshots
   ipcMain.handle(IPC.screenshotsList, (_e, id: string) => listScreenshots(id));
+  ipcMain.handle(IPC.screenshotsAll, () => listAllScreenshots());
   ipcMain.handle(IPC.screenshotsCopy, (_e, id: string, name: string) => copyScreenshot(id, name));
   ipcMain.handle(IPC.screenshotsDelete, (_e, id: string, name: string) => deleteScreenshot(id, name));
   ipcMain.handle(IPC.screenshotsReveal, (_e, id: string, name: string) => revealScreenshot(id, name));
@@ -497,6 +514,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.newsMinecraft, () => minecraftNews());
   ipcMain.handle(IPC.newsPatchNotes, (_e, contentPath: string) => minecraftPatchNotes(contentPath));
   ipcMain.handle(IPC.statsPlaylog, () => readPlaylog());
+  ipcMain.handle(IPC.mapOpen, (_e, target: MapTarget) => openMap(target));
   ipcMain.handle(IPC.invitesCreate, (_e, instanceId: string, address: string, name: string, from?: string) =>
     createInvite(instanceId, address, name, from)
   );
@@ -532,12 +550,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
 
   // Running games
   ipcMain.handle(IPC.mcRunningList, () => [...games.keys()]);
-  ipcMain.handle(IPC.mcKill, (_e, instanceId: string) => {
-    const child = games.get(instanceId);
-    if (!child) return;
-    killed.add(instanceId);
-    child.kill();
-  });
+  ipcMain.handle(IPC.mcKill, (_e, instanceId: string) => killGame(instanceId));
   ipcMain.handle(IPC.mcCrashFix, (_e, instanceId: string, fix: CrashFix) =>
     applyCrashFix(instanceId, fix, (current, total, message) =>
       emitToAll(IPC.mcCrashFixProgress, { instanceId, current, total, message })
@@ -611,6 +624,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       const playStart = Date.now();
       const settings = getSettings();
       let gameLog = '';
+      let stopMonitor: () => void = () => undefined;
       killed.delete(instanceId);
       const activity = createActivityTracker({ world: opts?.world, server: opts?.server || instance.serverAddress });
       const child = launchGame({
@@ -623,6 +637,16 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
         onExit: (code) => {
           games.delete(instanceId);
           emitRunning();
+          stopMonitor();
+          emitToAll(IPC.mcStats, { instanceId, ram: 0, cpu: 0, maxMb: instance.ramMb, ended: true });
+          if (!games.size) {
+            setTrayTooltip('ZerdaLauncher');
+            // Back from the tray once the last game closes (also shows a crash dialog).
+            if (hiddenForGame) {
+              hiddenForGame = false;
+              showWindow();
+            }
+          }
           // Accumulate playtime for stats, drop Discord presence back to idle.
           const inst = getInstance(instance.id);
           logSession(instance.id, playStart, Date.now() - playStart);
@@ -656,6 +680,19 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       });
       games.set(instanceId, child);
       emitRunning();
+      const gb = (b: number) => (b / 1024 ** 3).toFixed(1);
+      stopMonitor = monitorGame(child.pid ?? 0, (s) => {
+        emitToAll(IPC.mcStats, { instanceId, ram: s.ram, cpu: s.cpu, maxMb: instance.ramMb });
+        setTrayTooltip(`ZerdaLauncher — ${instance.name}: RAM ${gb(s.ram)} GB · CPU ${s.cpu}%`);
+      });
+      if (settings.closeOnLaunch) {
+        const win = getMainWindow();
+        if (win?.isVisible()) {
+          win.hide();
+          hiddenForGame = true;
+          trayNotice('ZerdaLauncher działa w zasobniku', 'Wróci sam po zamknięciu gry. Możesz go też otworzyć z ikony.');
+        }
+      }
       updateInstance(instance.id, {
         lastPlayed: Date.now(),
         sessions: (instance.sessions ?? 0) + 1

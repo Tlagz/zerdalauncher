@@ -1,6 +1,16 @@
 /** What changed in each launcher version, newest first. Add an entry with every release. */
 export const CHANGELOG: Array<{ version: string; date: string; changes: string[] }> = [
   {
+    version: '0.1.27',
+    date: '2026-10-21',
+    changes: [
+      'Zakładka Zrzuty: screeny ze wszystkich instancji w jednym miejscu',
+      'Mapa świata 2D z lotu ptaka — też dla światów hostowanych serwerów',
+      'Monitor gry: RAM i CPU na pasku stanu',
+      'Ikona w zasobniku i chowanie launchera na czas gry'
+    ]
+  },
+  {
     version: '0.1.26',
     date: '2026-10-17',
     changes: [

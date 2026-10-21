@@ -7,6 +7,7 @@ import { resolveAppearance } from '../shared/appearance';
 import { Sidebar } from './components/Sidebar';
 import { HomePage } from './components/HomePage';
 import { InstancesPage } from './components/InstancesPage';
+import { ScreenshotsPage } from './components/ScreenshotsPage';
 import { ServersPage } from './components/ServersPage';
 import { AccountsPage } from './components/AccountsPage';
 import { SettingsPage } from './components/SettingsPage';
@@ -113,6 +114,7 @@ export default function App() {
           <div key={page} className="page-body">
             {page === 'home' && <HomePage />}
             {page === 'instances' && <InstancesPage />}
+            {page === 'screenshots' && <ScreenshotsPage />}
             {page === 'servers' && <ServersPage />}
             {page === 'accounts' && <AccountsPage />}
             {page === 'customize' && <CustomizePage />}

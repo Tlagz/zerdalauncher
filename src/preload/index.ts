@@ -27,6 +27,10 @@ import type {
   CrashFix,
   ScreenshotInfo,
   ExportOptions,
+  ScreenshotEntry,
+  GameStats,
+  MapInfo,
+  MapTarget,
   McNewsEntry,
   McPatchNotes,
   PlaySession,
@@ -64,6 +68,8 @@ const api = {
   },
   screenshots: {
     list: (id: string): Promise<ScreenshotInfo[]> => ipcRenderer.invoke(IPC.screenshotsList, id),
+    /** All instances' screenshots, newest first. */
+    all: (): Promise<ScreenshotEntry[]> => ipcRenderer.invoke(IPC.screenshotsAll),
     copy: (id: string, name: string): Promise<void> => ipcRenderer.invoke(IPC.screenshotsCopy, id, name),
     /** Moves the file to the Recycle Bin. */
     delete: (id: string, name: string): Promise<ScreenshotInfo[]> =>
@@ -170,6 +176,22 @@ const api = {
       ipcRenderer.on(IPC.mcLog, fn);
       return () => {
         ipcRenderer.off(IPC.mcLog, fn);
+      };
+    },
+    /** Memory/CPU of running games, every ~2 s (ended: true when a game closes). */
+    onStats: (cb: (s: GameStats) => void): (() => void) => {
+      const fn = (_: unknown, s: GameStats) => cb(s);
+      ipcRenderer.on(IPC.mcStats, fn);
+      return () => {
+        ipcRenderer.off(IPC.mcStats, fn);
+      };
+    },
+    /** "Graj" chosen in the tray menu. */
+    onTrayLaunch: (cb: (instanceId: string) => void): (() => void) => {
+      const fn = (_: unknown, id: string) => cb(id);
+      ipcRenderer.on(IPC.trayLaunch, fn);
+      return () => {
+        ipcRenderer.off(IPC.trayLaunch, fn);
       };
     },
     /** Fired when a game session ends with a crash, with the diagnosis. */
@@ -359,6 +381,12 @@ const api = {
         ipcRenderer.off(IPC.invitesOpened, fn);
       };
     }
+  },
+  map: {
+    /** Open a world for the 2D map; tiles load from map.tileUrl(). */
+    open: (target: MapTarget): Promise<MapInfo> => ipcRenderer.invoke(IPC.mapOpen, target),
+    tileUrl: (token: string, dim: string, x: number, z: number, v: number): string =>
+      `zerda-map://tile/${token}/${dim}/${x}/${z}.png?v=${v}`
   },
   stats: {
     playlog: (): Promise<PlaySession[]> => ipcRenderer.invoke(IPC.statsPlaylog)

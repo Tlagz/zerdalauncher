@@ -213,8 +213,12 @@ ${pick.target}
             checked={local.closeOnLaunch}
             onChange={(e) => setLocal({ ...local, closeOnLaunch: e.target.checked })}
           />
-          Zamknij launcher po uruchomieniu gry
+          Chowaj launcher do zasobnika podczas gry
         </label>
+        <div className="field-hint">
+          Launcher wróci sam po zamknięciu gry. Zamknięcie okna w trakcie gry też chowa go do zasobnika — ikona przy
+          zegarze pozwala wrócić, uruchomić ostatnie instancje albo zatrzymać grę.
+        </div>
         <div className="custom-field language-field">
           <label>Język / Language</label>
           <Segmented

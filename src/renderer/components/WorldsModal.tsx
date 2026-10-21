@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArchiveRestore, FolderOpen, Earth, Save, Trash2, Loader2 } from 'lucide-react';
+import { ArchiveRestore, FolderOpen, Earth, Save, Trash2, Loader2, MapPinned } from 'lucide-react';
+import { WorldMapModal } from './WorldMapModal';
 import { useBackdropClose } from '../hooks/useBackdropClose';
 import { confirmDialog } from '../ui/feedback';
 import { ModalHeader } from '../ui/ModalHeader';
@@ -13,6 +14,7 @@ export function WorldsModal({ instance, onClose }: { instance: Instance; onClose
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mapOf, setMapOf] = useState<string | null>(null);
   const backdrop = useBackdropClose(onClose);
 
   const load = async () => {
@@ -105,6 +107,9 @@ export function WorldsModal({ instance, onClose }: { instance: Instance; onClose
                   {w.lastPlayed ? ` · ostatnio: ${formatDate(w.lastPlayed)}` : ''}
                 </div>
               </div>
+              <button className="ghost" onClick={() => setMapOf(w.name)} title="Mapa świata z lotu ptaka">
+                <MapPinned size={15} /> Mapa
+              </button>
               <button className="primary" disabled={busy === w.name} onClick={() => backup(w)}>
                 {busy === w.name ? <Loader2 size={15} className="spin" /> : <Save size={15} />}
                 {busy === w.name ? 'Tworzę…' : 'Kopia'}
@@ -116,6 +121,13 @@ export function WorldsModal({ instance, onClose }: { instance: Instance; onClose
           ))}
         </div>
       </div>
+      {mapOf && (
+        <WorldMapModal
+          target={{ kind: 'instance', instanceId: instance.id, world: mapOf }}
+          title={mapOf}
+          onClose={() => setMapOf(null)}
+        />
+      )}
     </div>,
     document.body
   );

@@ -154,6 +154,18 @@ export interface LaunchStatus {
   message?: string;
 }
 
+/** Live resource use of a running game (sampled every ~2 s). */
+export interface GameStats {
+  instanceId: string;
+  /** Memory in use (working set), bytes; 0 once the game has ended. */
+  ram: number;
+  /** Share of the whole CPU, 0–100. */
+  cpu: number;
+  /** -Xmx given to the game, MB. */
+  maxMb: number;
+  ended?: boolean;
+}
+
 /** Launcher self-update lifecycle (electron-updater). */
 export type UpdateStatus =
   | { state: 'checking' }
@@ -267,6 +279,12 @@ export interface ScreenshotInfo {
   name: string;
   size: number;
   takenAt: number;
+}
+
+/** A screenshot together with the instance it belongs to (Screenshots page). */
+export interface ScreenshotEntry extends ScreenshotInfo {
+  instanceId: string;
+  instanceName?: string;
 }
 
 /** What to put into an exported pack. */
@@ -386,4 +404,20 @@ export interface InvitePreview {
   mods: Array<{ title: string; version: string }>;
   /** Existing instances with the same Minecraft version and loader. */
   matching: string[];
+}
+
+// --- World map ---
+export type MapDimension = 'overworld' | 'nether' | 'end';
+
+/** Which world to map: a singleplayer save or a hosted server's world. */
+export type MapTarget = { kind: 'instance'; instanceId: string; world: string } | { kind: 'server'; serverId: string };
+
+export interface MapInfo {
+  /** Opaque id used in tile URLs (zerda-map://tile/<token>/…). */
+  token: string;
+  name: string;
+  /** Region coordinates that exist, per dimension. */
+  dims: Partial<Record<MapDimension, Array<[number, number]>>>;
+  spawn?: { x: number; z: number };
+  player?: { x: number; z: number; dim: MapDimension };
 }

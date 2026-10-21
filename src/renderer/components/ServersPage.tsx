@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Play, Square, Loader2, Terminal, SlidersHorizontal, FolderOpen, Trash2, Download, Plus } from 'lucide-react';
+import { Play, Square, Loader2, Terminal, SlidersHorizontal, FolderOpen, Trash2, Download, Plus, MapPinned } from 'lucide-react';
+import { WorldMapModal } from './WorldMapModal';
 import { useStore } from '../store';
 import { LoaderIcon } from './InstanceIcon';
 import { plural } from '../format';
@@ -21,6 +22,7 @@ function ServerCard({
   const { refreshServers } = useStore();
   const status = useStore((s) => s.serverStatus[server.id]);
   const [dragOver, setDragOver] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const state = status?.state ?? 'stopped';
   const running = state === 'running' || state === 'starting';
 
@@ -113,6 +115,9 @@ function ServerCard({
           <button onClick={onProps} title="Ustawienia (server.properties)">
             <SlidersHorizontal size={16} />
           </button>
+          <button onClick={() => setShowMap(true)} title="Mapa świata">
+            <MapPinned size={16} />
+          </button>
           <button onClick={() => window.api.servers.openFolder(server.id)} title="Otwórz folder">
             <FolderOpen size={16} />
           </button>
@@ -121,6 +126,9 @@ function ServerCard({
           </button>
         </div>
       </div>
+      {showMap && (
+        <WorldMapModal target={{ kind: 'server', serverId: server.id }} title={server.name} onClose={() => setShowMap(false)} />
+      )}
     </div>
   );
 }

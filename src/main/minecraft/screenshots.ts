@@ -3,7 +3,8 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { protocol, net, nativeImage, clipboard, shell } from 'electron';
 import { instanceGameDir } from '../utils/paths';
-import type { ScreenshotInfo } from '../../shared/types';
+import { listInstances } from './instances';
+import type { ScreenshotEntry, ScreenshotInfo } from '../../shared/types';
 
 export const SHOT_SCHEME = 'zerda-shot';
 const IMAGE = /\.(png|jpe?g)$/i;
@@ -32,6 +33,13 @@ export function listScreenshots(instanceId: string): ScreenshotInfo[] {
     }
   }
   return out.sort((a, b) => b.takenAt - a.takenAt);
+}
+
+/** Every instance's screenshots, newest first. */
+export function listAllScreenshots(): ScreenshotEntry[] {
+  return listInstances()
+    .flatMap((inst) => listScreenshots(inst.id).map((s) => ({ ...s, instanceId: inst.id, instanceName: inst.name })))
+    .sort((a, b) => b.takenAt - a.takenAt);
 }
 
 export function copyScreenshot(instanceId: string, name: string): void {
@@ -70,13 +78,6 @@ async function thumbnail(file: string): Promise<Buffer> {
     thumbs.set(key, buf);
   }
   return buf;
-}
-
-/** Must run before app 'ready'. */
-export function registerShotScheme(): void {
-  protocol.registerSchemesAsPrivileged([
-    { scheme: SHOT_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
-  ]);
 }
 
 /**

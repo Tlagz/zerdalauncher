@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { playSound } from './ui/sounds';
+import { alertDialog } from './ui/feedback';
 import type {
   Account,
   Instance,
@@ -11,14 +12,15 @@ import type {
   ServerStatus,
   TunnelStatus,
   CrashReport,
-  Invite
+  Invite,
+  GameStats
 } from '../shared/types';
 
 /** Instances-page actions other places can trigger (e.g. the Ctrl+K palette). */
 export type InstancesAction = 'create' | 'modpacks' | 'import';
 
 interface UiState {
-  page: 'home' | 'instances' | 'servers' | 'accounts' | 'customize' | 'settings';
+  page: 'home' | 'instances' | 'screenshots' | 'servers' | 'accounts' | 'customize' | 'settings';
   setPage: (p: UiState['page']) => void;
 
   instances: Instance[];
@@ -32,6 +34,8 @@ interface UiState {
   launchStatus: LaunchStatus | null;
   /** Instance ids whose game process is currently running. */
   runningGames: string[];
+  /** Live memory/CPU per running game, with the last minute of RAM samples. */
+  gameStats: Record<string, GameStats & { ramHistory: number[] }>;
 
   /** Diagnosis of the last crashed game session (shown in a dialog). */
   crash: CrashReport | null;
@@ -80,6 +84,7 @@ export const useStore = create<UiState>((set) => ({
   launchProgress: null,
   launchStatus: null,
   runningGames: [],
+  gameStats: {},
   crash: null,
   selectedInstanceId: null,
   openInstance: (id) => set({ selectedInstanceId: id, ...(id ? { page: 'instances' as const } : {}) }),
@@ -118,6 +123,20 @@ window.api.mc.onStatus((s) => {
 window.api.mc.onRunning((ids) => useStore.setState({ runningGames: ids }));
 window.api.mc.runningList().then((ids) => useStore.setState({ runningGames: ids }));
 window.api.invites.onOpened((invite) => useStore.setState({ invite }));
+window.api.mc.onStats((st) =>
+  useStore.setState((s) => {
+    const next = { ...s.gameStats };
+    if (st.ended) delete next[st.instanceId];
+    else next[st.instanceId] = { ...st, ramHistory: [...(s.gameStats[st.instanceId]?.ramHistory ?? []), st.ram].slice(-30) };
+    return { gameStats: next };
+  })
+);
+window.api.mc.onTrayLaunch((id) =>
+  window.api.mc.launch(id).then(
+    () => useStore.getState().refreshInstances(),
+    (e) => alertDialog({ title: 'Nie udało się uruchomić', message: (e as Error).message, tone: 'error' })
+  )
+);
 window.api.mc.onCrash((crash) => {
   playSound('error');
   useStore.setState({ crash });

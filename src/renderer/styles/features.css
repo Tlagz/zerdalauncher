@@ -1376,3 +1376,152 @@ kbd {
 .flip {
   transform: rotate(180deg);
 }
+
+/* ---------- Screenshots page ---------- */
+.shots-day + .shots-day {
+  margin-top: 26px;
+}
+.shots-day-title {
+  margin: 0 0 12px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+.shots-day-title::first-letter {
+  text-transform: uppercase;
+}
+.shots-grid.page {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  overflow: visible;
+}
+.shot-meta b {
+  margin-right: 6px;
+}
+
+/* ---------- Game monitor (status bar) ---------- */
+.game-meter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.meter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.meter-item svg {
+  color: var(--accent);
+}
+.meter-item.warn,
+.meter-item.warn svg {
+  color: var(--warning);
+}
+.meter-spark polyline {
+  stroke: var(--accent-strong);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.game-meter + .status-stop {
+  margin-left: 0;
+}
+
+/* ---------- World map ---------- */
+.map-modal {
+  width: min(1200px, 96vw);
+  height: 90vh;
+}
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.map-zoom {
+  min-width: 42px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.map-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.025) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.025) 75%) 0 0 / 24px 24px,
+    #0a0b10;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.map-stage.dragging {
+  cursor: grabbing;
+}
+.map-tile {
+  position: absolute;
+  max-width: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.map-tile.loaded {
+  opacity: 1;
+}
+.map-stage.pixelated .map-tile {
+  image-rendering: pixelated;
+}
+.map-marker {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.map-marker::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom: none;
+  border-top-color: inherit;
+}
+.map-marker.spawn {
+  background: #10b981;
+  border-color: #10b981;
+}
+.map-marker.player {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.map-hud {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}

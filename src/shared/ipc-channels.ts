@@ -11,6 +11,7 @@ export const IPC = {
 
   // Screenshots
   screenshotsList: 'screenshots:list',
+  screenshotsAll: 'screenshots:all',
   screenshotsCopy: 'screenshots:copy',
   screenshotsDelete: 'screenshots:delete',
   screenshotsReveal: 'screenshots:reveal',
@@ -51,6 +52,8 @@ export const IPC = {
   mcRunningList: 'mc:runningList',
   mcRunning: 'mc:running',
   mcCrash: 'mc:crash',
+  mcStats: 'mc:stats',
+  trayLaunch: 'tray:launch',
   mcCrashFix: 'mc:crashFix',
   mcCrashFixProgress: 'mc:crashFixProgress',
 
@@ -125,6 +128,7 @@ export const IPC = {
   newsMinecraft: 'news:minecraft',
   newsPatchNotes: 'news:patchNotes',
   statsPlaylog: 'stats:playlog',
+  mapOpen: 'map:open',
   invitesCreate: 'invites:create',
   invitesFromClipboard: 'invites:fromClipboard',
   invitesPreview: 'invites:preview',

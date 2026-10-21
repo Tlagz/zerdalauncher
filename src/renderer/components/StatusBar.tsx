@@ -1,6 +1,7 @@
-import { Loader2, CircleCheck, CircleAlert, Square } from 'lucide-react';
+import { Loader2, CircleCheck, CircleAlert, Square, MemoryStick, Cpu } from 'lucide-react';
 import { useStore } from '../store';
 import { confirmDialog } from '../ui/feedback';
+import type { GameStats } from '../../shared/types';
 
 const STATE_LABEL: Record<string, string> = {
   preparing: 'Przygotowanie',
@@ -10,8 +11,33 @@ const STATE_LABEL: Record<string, string> = {
   error: 'Błąd'
 };
 
+/** RAM (of the allocated -Xmx) with a one-minute sparkline, and CPU share. */
+function GameMeter({ stats }: { stats: GameStats & { ramHistory: number[] } }) {
+  const maxBytes = stats.maxMb * 1024 * 1024;
+  const gb = (b: number) => (b / 1024 ** 3).toFixed(1);
+  // Working set includes the JVM itself, so it can exceed -Xmx a little.
+  const top = Math.max(maxBytes, ...stats.ramHistory) * 1.05;
+  const pts = stats.ramHistory.map((v, i, a) => `${a.length > 1 ? (i / (a.length - 1)) * 60 : 60},${18 - (v / top) * 16}`).join(' ');
+  const high = stats.ram > maxBytes * 0.9;
+  return (
+    <div className="game-meter" title="Pamięć używana przez proces gry (z JVM) / przydzielony RAM">
+      <span className={`meter-item ${high ? 'warn' : ''}`}>
+        <MemoryStick size={14} /> {gb(stats.ram)} / {gb(maxBytes)} GB
+      </span>
+      {stats.ramHistory.length > 1 && (
+        <svg className="meter-spark" viewBox="0 0 60 20" width="60" height="20" aria-hidden>
+          <polyline points={pts} fill="none" />
+        </svg>
+      )}
+      <span className="meter-item">
+        <Cpu size={14} /> {stats.cpu}%
+      </span>
+    </div>
+  );
+}
+
 export function StatusBar() {
-  const { launchProgress, launchStatus, runningGames, instances } = useStore();
+  const { launchProgress, launchStatus, runningGames, instances, gameStats } = useStore();
 
   if (!launchStatus || launchStatus.state === 'stopped') return null;
   const pct =
@@ -37,6 +63,9 @@ export function StatusBar() {
       )}
       {launchStatus.message && launchStatus.message !== STATE_LABEL[launchStatus.state] && (
         <span className="status-msg">{launchStatus.message}</span>
+      )}
+      {launchStatus.state === 'running' && gameStats[launchStatus.instanceId] && (
+        <GameMeter stats={gameStats[launchStatus.instanceId]} />
       )}
       {launchStatus.state === 'running' && runningGames.includes(launchStatus.instanceId) && (
         <button
