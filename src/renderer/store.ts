@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { playSound } from './ui/sounds';
 import { alertDialog } from './ui/feedback';
+import { markInviteSeen } from './invites';
 import type {
   Account,
   Instance,
@@ -122,7 +123,11 @@ window.api.mc.onStatus((s) => {
 });
 window.api.mc.onRunning((ids) => useStore.setState({ runningGames: ids }));
 window.api.mc.runningList().then((ids) => useStore.setState({ runningGames: ids }));
-window.api.invites.onOpened((invite) => useStore.setState({ invite }));
+// A clicked zerda:// link always shows; afterwards the clipboard check skips it.
+window.api.invites.onOpened((invite) => {
+  markInviteSeen(invite.link);
+  useStore.setState({ invite });
+});
 window.api.mc.onStats((st) =>
   useStore.setState((s) => {
     const next = { ...s.gameStats };

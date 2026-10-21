@@ -8,6 +8,7 @@ export const EN: Record<string, string> = {
   'Start': 'Home',
   'Instancje': 'Instances',
   'Zrzuty': 'Screenshots',
+  'Poprawka: zaproszenie ze schowka pokazuje się tylko raz, a nie przy każdym uruchomieniu': 'Fix: an invite from the clipboard shows only once, not on every start',
   'Zakładka Zrzuty: screeny ze wszystkich instancji w jednym miejscu': 'Screenshots tab: shots from all instances in one place',
   'Mapa świata 2D z lotu ptaka — też dla światów hostowanych serwerów': "2D bird's-eye world map — also for hosted servers' worlds",
   'Monitor gry: RAM i CPU na pasku stanu': 'Game monitor: RAM and CPU in the status bar',
