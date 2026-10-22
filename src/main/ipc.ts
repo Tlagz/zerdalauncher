@@ -11,7 +11,8 @@ import {
   updateInstance,
   deleteInstance,
   getInstance,
-  duplicateInstance
+  duplicateInstance,
+  copyGameSettings
 } from './minecraft/instances';
 import { fetchVersionManifest } from './minecraft/manifest';
 import { prepareVersion } from './minecraft/downloader';
@@ -158,6 +159,11 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.instancesUpdate, (_e, id, patch) => updateInstance(id, patch));
   ipcMain.handle(IPC.instancesDelete, (_e, id) => deleteInstance(id));
   ipcMain.handle(IPC.instancesDuplicate, (_e, id) => duplicateInstance(id));
+  ipcMain.handle(IPC.instancesCopySettings, (_e, fromId: string, toId: string, servers: boolean) => {
+    // The game writes options.txt when it closes, which would undo the copy.
+    if (games.has(toId)) throw new Error('Zamknij grę w tej instancji przed kopiowaniem ustawień.');
+    return copyGameSettings(fromId, toId, servers);
+  });
   ipcMain.handle(IPC.instancesOpenFolder, (_e, id) => shell.openPath(instanceDir(id)));
   ipcMain.handle(IPC.instancesOpenCrashReports, (_e, id: string) => {
     const crashDir = path.join(instanceGameDir(id), 'crash-reports');

@@ -4,6 +4,7 @@ import { ImageUp } from 'lucide-react';
 import { useStore } from '../store';
 import { LoaderIcon } from './InstanceIcon';
 import { ModalHeader } from '../ui/ModalHeader';
+import { showToast } from '../ui/feedback';
 import type { Instance } from '../../shared/types';
 
 const PRESET_ICONS = ['🧱', '🧵', '⚙️', '🔥', '🗺️', '⚔️', '🏰', '🚀', '🐉', '🌌', '🧙', '🧪', '💎', '🪓', '🌲', '👾'];
@@ -19,6 +20,8 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
   const groups = useMemo(() => [...new Set(instances.map((i) => i.group).filter((g): g is string => !!g))].sort(), [instances]);
   const [name, setName] = useState(instance.name);
   const [group, setGroup] = useState(instance.group ?? '');
+  const [copyFrom, setCopyFrom] = useState('');
+  const [copyServers, setCopyServers] = useState(false);
   const [icon, setIcon] = useState(instance.icon ?? '');
   const [ramMb, setRamMb] = useState(instance.ramMb);
   const [javaPath, setJavaPath] = useState(instance.javaPath ?? '');
@@ -173,6 +176,44 @@ export function EditInstanceModal({ instance, onClose }: { instance: Instance; o
               Dopisywane do komendy uruchomienia (oprócz <code>-Xmx{ramMb}M</code>). Rozdzielaj spacjami.
             </div>
           </div>
+
+          {instances.length > 1 && (
+            <div className="form-row">
+              <label>Skopiuj ustawienia gry z innej instancji</label>
+              <div className="copy-settings-row">
+                <select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
+                  <option value="">Wybierz instancję…</option>
+                  {instances
+                    .filter((i) => i.id !== instance.id)
+                    .map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!copyFrom}
+                  onClick={async () => {
+                    setError(null);
+                    try {
+                      const n = await window.api.instances.copySettings(copyFrom, instance.id, copyServers);
+                      showToast(n ? 'Skopiowano ustawienia gry.' : 'Ta instancja nie ma jeszcze zapisanych ustawień.', n ? 'success' : 'info');
+                    } catch (e) {
+                      setError((e as Error).message);
+                    }
+                  }}
+                >
+                  Kopiuj
+                </button>
+              </div>
+              <label className="check-row copy-servers">
+                <input type="checkbox" checked={copyServers} onChange={(e) => setCopyServers(e.target.checked)} />
+                Razem z listą serwerów
+              </label>
+              <div className="field-hint">Nadpisze sterowanie, grafikę i ustawienia shaderów tej instancji.</div>
+            </div>
+          )}
 
           <div className="form-row">
             <label>Serwer — auto-dołączanie (Quick Play)</label>

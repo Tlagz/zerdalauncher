@@ -311,7 +311,8 @@ export async function publishPack(req: PublishRequest, progress: PackProgress): 
       url: asset.browser_download_url,
       size: data.length,
       sha1,
-      mods: listInstalledContent(inst.id, 'mod').filter((m) => m.enabled).length
+      mods: listInstalledContent(inst.id, 'mod').filter((m) => m.enabled).length,
+      ...(req.required ? { required: true } : {})
     });
     // The publishing instance now counts as this version (so it isn't offered its own update).
     writeJson(PACK_FILE(inst.id), { id: pack.id, version, files: readJson<{ files?: string[] }>(PACK_FILE(inst.id), {}).files ?? [] });

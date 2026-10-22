@@ -55,6 +55,7 @@ export function PublishPackModal({
   const [version, setVersion] = useState(bump(pack?.versions[0]?.version));
   const [changelog, setChangelog] = useState('');
   const [include, setInclude] = useState({ resourcepacks: true, shaderpacks: true, options: false });
+  const [required, setRequired] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const backdrop = useBackdropClose(() => !busy && onClose());
   const inst = instances.find((i) => i.id === instanceId);
@@ -105,7 +106,8 @@ export function PublishPackModal({
           : undefined,
         version: showRelease ? version.trim() : undefined,
         changelog: changelog.trim(),
-        include: showRelease ? include : undefined
+        include: showRelease ? include : undefined,
+        required: showRelease && required
       });
       await useStore.getState().refreshInstances();
       showToast(
@@ -270,6 +272,12 @@ export function PublishPackModal({
                   />
                 </div>
               </div>
+              <Toggle
+                checked={required}
+                onChange={setRequired}
+                label="Wymagana na serwerze"
+                description="Gracze muszą zaktualizować paczkę przed grą — bez tego launcher nie uruchomi starej wersji"
+              />
               <div className="field-hint">Mody i configi wchodzą zawsze. Światy zostają u Ciebie.</div>
               <Toggle
                 checked={include.resourcepacks}

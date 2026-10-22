@@ -9,6 +9,7 @@ import { SkinLibraryModal } from './SkinLibraryModal';
 import { HomeNews, NewReleaseBanner } from './HomeNews';
 import { HomeStats } from './HomeStats';
 import { HomeServers } from './HomeServers';
+import { HomeSztulagz } from './HomeSztulagz';
 import { alertDialog } from '../ui/feedback';
 import { formatDate, formatPlaytime } from '../format';
 import { transition } from '../ui/viewTransition';
@@ -125,6 +126,7 @@ export function HomePage() {
       <div className="home-layout">
         <div className="home-main">
           <NewReleaseBanner />
+          <HomeSztulagz />
           <div className="section">
             <h3>Ostatnio grane</h3>
             {recent.length === 0 ? (

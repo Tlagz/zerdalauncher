@@ -67,7 +67,10 @@ const api = {
     openFolder: (id: string): Promise<string> => ipcRenderer.invoke(IPC.instancesOpenFolder, id),
     openCrashReports: (id: string): Promise<string> =>
       ipcRenderer.invoke(IPC.instancesOpenCrashReports, id),
-    pickIcon: (): Promise<string | null> => ipcRenderer.invoke(IPC.instancesPickIcon)
+    pickIcon: (): Promise<string | null> => ipcRenderer.invoke(IPC.instancesPickIcon),
+    /** Copy controls/video settings (and optionally the server list); returns files copied. */
+    copySettings: (fromId: string, toId: string, servers: boolean): Promise<number> =>
+      ipcRenderer.invoke(IPC.instancesCopySettings, fromId, toId, servers)
   },
   screenshots: {
     list: (id: string): Promise<ScreenshotInfo[]> => ipcRenderer.invoke(IPC.screenshotsList, id),

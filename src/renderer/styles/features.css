@@ -1839,3 +1839,119 @@ kbd {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+/* ---------- Home: Sztulagz server tile ---------- */
+.sztulagz-tile h3 svg:first-child {
+  color: #fbbf24;
+}
+.sztulagz-server {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--pack-accent, var(--accent-strong)) 40%, transparent);
+  background: color-mix(in srgb, var(--pack-accent, var(--accent-strong)) 8%, transparent);
+}
+.sztulagz-server + .sztulagz-server {
+  margin-top: 10px;
+}
+.sztulagz-banner {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.18;
+  mask-image: linear-gradient(90deg, transparent, #000 60%);
+  pointer-events: none;
+}
+.sztulagz-server > :not(.sztulagz-banner) {
+  position: relative;
+}
+.sztulagz-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sztulagz-status {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.25);
+}
+.sztulagz-status i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+.sztulagz-status.on {
+  color: #34d399;
+}
+.sztulagz-motd {
+  font-size: var(--fs-md);
+}
+.sztulagz-players {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sztulagz-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sztulagz-count svg {
+  color: var(--pack-accent, var(--accent));
+}
+.sztulagz-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.sztulagz-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 2px;
+  border-radius: 999px;
+  font-size: var(--fs-sm);
+  background: rgba(255, 255, 255, 0.06);
+}
+.sztulagz-player img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+}
+.sztulagz-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.sztulagz-server .primary {
+  background: linear-gradient(135deg, var(--pack-accent, var(--accent-strong)), color-mix(in srgb, var(--pack-accent, var(--accent-strong)) 70%, #000));
+}
+
+/* Copy game settings */
+.copy-settings-row {
+  display: flex;
+  gap: 8px;
+}
+.copy-servers {
+  margin-top: 8px;
+}

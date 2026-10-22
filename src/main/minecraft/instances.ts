@@ -183,3 +183,22 @@ export function duplicateInstance(id: string): Instance | null {
   }
   return copy;
 }
+
+/** Game settings files: controls/video (vanilla, OptiFine, shaders) and, optionally, the server list. */
+const SETTINGS_FILES = ['options.txt', 'optionsof.txt', 'optionsshaders.txt'];
+
+/** Copy game settings from one instance to another; returns how many files were copied. */
+export function copyGameSettings(fromId: string, toId: string, servers: boolean): number {
+  if (fromId === toId) return 0;
+  const from = instanceGameDir(fromId);
+  const to = instanceGameDir(toId);
+  fs.mkdirSync(to, { recursive: true });
+  let copied = 0;
+  for (const name of [...SETTINGS_FILES, ...(servers ? ['servers.dat'] : [])]) {
+    const src = path.join(from, name);
+    if (!fs.existsSync(src)) continue;
+    fs.copyFileSync(src, path.join(to, name));
+    copied++;
+  }
+  return copied;
+}

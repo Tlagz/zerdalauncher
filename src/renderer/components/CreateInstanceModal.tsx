@@ -11,7 +11,10 @@ interface Props {
 }
 
 export function CreateInstanceModal({ onClose, initialVersion }: Props) {
-  const { refreshInstances, settings } = useStore();
+  const { refreshInstances, settings, instances } = useStore();
+  // Start from another instance's controls/graphics (and optionally its server list).
+  const [settingsFrom, setSettingsFrom] = useState('');
+  const [withServers, setWithServers] = useState(false);
   const [versions, setVersions] = useState<Array<{ id: string; type: string }>>([]);
   const [latest, setLatest] = useState<{ release: string; snapshot: string } | null>(null);
   const [showSnapshots, setShowSnapshots] = useState(false);
@@ -65,13 +68,14 @@ export function CreateInstanceModal({ onClose, initialVersion }: Props) {
     setError(null);
     setBusy(true);
     try {
-      await window.api.instances.create({
+      const created = await window.api.instances.create({
         name: name || `${mcVersion} ${loader}`,
         mcVersion,
         loader,
         loaderVersion: loader === 'vanilla' ? undefined : loaderVersion || undefined,
         ramMb
       });
+      if (settingsFrom) await window.api.instances.copySettings(settingsFrom, created.id, withServers);
       await refreshInstances();
       onClose();
     } catch (e) {
@@ -192,6 +196,26 @@ export function CreateInstanceModal({ onClose, initialVersion }: Props) {
             onChange={(e) => setRamMb(Number(e.target.value))}
           />
         </div>
+
+        {instances.length > 0 && (
+          <div className="form-row">
+            <label>Ustawienia gry (sterowanie, grafika)</label>
+            <select value={settingsFrom} onChange={(e) => setSettingsFrom(e.target.value)}>
+              <option value="">Domyślne Minecrafta</option>
+              {instances.map((i) => (
+                <option key={i.id} value={i.id}>
+                  Skopiuj z: {i.name}
+                </option>
+              ))}
+            </select>
+            {settingsFrom && (
+              <label className="check-row copy-servers">
+                <input type="checkbox" checked={withServers} onChange={(e) => setWithServers(e.target.checked)} />
+                Razem z listą serwerów
+              </label>
+            )}
+          </div>
+        )}
 
         <div className="form-actions">
           <button onClick={onClose} disabled={busy}>

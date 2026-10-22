@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { playSound } from './ui/sounds';
 import { alertDialog } from './ui/feedback';
 import { markInviteSeen } from './invites';
+import { ensurePackUpToDate } from './packLaunch';
 import type {
   Account,
   Instance,
@@ -136,12 +137,16 @@ window.api.mc.onStats((st) =>
     return { gameStats: next };
   })
 );
-window.api.mc.onTrayLaunch((id) =>
-  window.api.mc.launch(id).then(
-    () => useStore.getState().refreshInstances(),
-    (e) => alertDialog({ title: 'Nie udało się uruchomić', message: (e as Error).message, tone: 'error' })
-  )
-);
+window.api.mc.onTrayLaunch(async (id) => {
+  const inst = useStore.getState().instances.find((i) => i.id === id);
+  try {
+    if (inst && !(await ensurePackUpToDate(inst))) return;
+    await window.api.mc.launch(id);
+    await useStore.getState().refreshInstances();
+  } catch (e) {
+    alertDialog({ title: 'Nie udało się uruchomić', message: (e as Error).message, tone: 'error' });
+  }
+});
 window.api.mc.onCrash((crash) => {
   playSound('error');
   useStore.setState({ crash });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { alertDialog, confirmDialog } from '../ui/feedback';
+import { ensurePackUpToDate } from '../packLaunch';
 import type { Instance } from '../../shared/types';
 
 /** Shared launch/stop state so the card, detail view and Home stay in sync. */
@@ -19,6 +20,7 @@ export function useLaunch(instance: Instance) {
   const launch = async (world?: string, server?: string) => {
     setBusy(true);
     try {
+      if (!(await ensurePackUpToDate(instance))) return;
       await window.api.mc.launch(instance.id, world || server ? { world, server } : undefined);
       await refreshInstances();
     } catch (e) {

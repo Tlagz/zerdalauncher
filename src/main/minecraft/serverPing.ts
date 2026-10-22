@@ -104,7 +104,19 @@ export async function pingServer(address: string, timeoutMs = 5000): Promise<Ser
             status = {
               online: true,
               latency: Date.now() - pingSent,
-              players: json.players ? { online: json.players.online ?? 0, max: json.players.max ?? 0 } : undefined,
+              players: json.players
+                ? {
+                    online: json.players.online ?? 0,
+                    max: json.players.max ?? 0,
+                    // Some servers put text lines (not players) in the sample — keep only nick-like names.
+                    names: Array.isArray(json.players.sample)
+                      ? json.players.sample
+                          .map((p: { name?: unknown }) => (typeof p.name === 'string' ? stripCodes(p.name) : ''))
+                          .filter((n: string) => /^[\w]{2,16}$/.test(n))
+                          .slice(0, 20)
+                      : undefined
+                  }
+                : undefined,
               version: json.version?.name ? stripCodes(String(json.version.name)) : undefined,
               motd: stripCodes(chatText(json.description)),
               favicon: typeof json.favicon === 'string' && json.favicon.startsWith('data:image/') ? json.favicon : undefined

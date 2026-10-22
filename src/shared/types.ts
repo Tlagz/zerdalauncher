@@ -344,7 +344,8 @@ export interface SavedServer {
 export interface ServerPing {
   online: boolean;
   latency?: number;
-  players?: { online: number; max: number };
+  /** `names`: the sample of online players the server shares (often up to 12). */
+  players?: { online: number; max: number; names?: string[] };
   version?: string;
   motd?: string;
   favicon?: string;
@@ -436,6 +437,8 @@ export interface CatalogVersion {
   size: number;
   sha1: string;
   mods: number;
+  /** The server needs this version: players must update before playing. */
+  required?: boolean;
 }
 
 /** How a pack card looks and what an install sets up (editable without a new version). */
@@ -484,6 +487,8 @@ export interface PublishRequest {
   changelog?: string;
   /** What goes into a released version besides mods and configs. */
   include?: { resourcepacks: boolean; shaderpacks: boolean; options: boolean };
+  /** Mark the released version as required by the server. */
+  required?: boolean;
 }
 
 export interface PublisherStatus {

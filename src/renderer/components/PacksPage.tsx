@@ -40,6 +40,7 @@ function ChangesModal({ pack, onClose }: { pack: CatalogPack; onClose: () => voi
             <div className="changelog-entry" key={v.version}>
               <div className="changelog-head">
                 <span className="tag">v{v.version}</span>
+                {v.required && <span className="tag beta">Wymagana</span>}
                 <span className="text-faint">
                   {formatDate(Date.parse(v.date))} · {v.mods} modów · {formatSize(v.size)}
                 </span>

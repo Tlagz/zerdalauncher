@@ -8,6 +8,7 @@ export const IPC = {
   instancesOpenFolder: 'instances:openFolder',
   instancesOpenCrashReports: 'instances:openCrashReports',
   instancesPickIcon: 'instances:pickIcon',
+  instancesCopySettings: 'instances:copySettings',
 
   // Screenshots
   screenshotsList: 'screenshots:list',

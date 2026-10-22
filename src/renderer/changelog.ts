@@ -1,6 +1,15 @@
 /** What changed in each launcher version, newest first. Add an entry with every release. */
 export const CHANGELOG: Array<{ version: string; date: string; changes: string[] }> = [
   {
+    version: '0.1.31',
+    date: '2026-10-22',
+    changes: [
+      'Serwer Sztulagz na stronie Start: status, gracze online i „Graj” jednym kliknięciem',
+      'Przed grą launcher sprawdza nową wersję paczki; wersje wymagane przez serwer trzeba pobrać',
+      'Kopiowanie ustawień gry (sterowanie, grafika, lista serwerów) między instancjami'
+    ]
+  },
+  {
     version: '0.1.30',
     date: '2026-10-22',
     changes: [

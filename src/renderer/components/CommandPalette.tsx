@@ -28,6 +28,7 @@ import { InstanceIcon } from './InstanceIcon';
 import { checkClipboardInvite } from '../invites';
 import { showToast } from '../ui/feedback';
 import { t } from '../i18n';
+import { ensurePackUpToDate } from '../packLaunch';
 import type { Instance, WorldInfo } from '../../shared/types';
 
 type Page = ReturnType<typeof useStore.getState>['page'];
@@ -127,6 +128,7 @@ function scrollToHeading(text: string) {
 
 async function launch(instance: Instance, world?: string) {
   try {
+    if (!(await ensurePackUpToDate(instance))) return;
     await window.api.mc.launch(instance.id, world ? { world } : undefined);
     await useStore.getState().refreshInstances();
   } catch (e) {
