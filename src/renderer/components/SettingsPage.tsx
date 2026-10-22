@@ -215,6 +215,14 @@ ${pick.target}
           />
           Chowaj launcher do zasobnika podczas gry
         </label>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={!!local.startMaximized}
+            onChange={(e) => setLocal({ ...local, startMaximized: e.target.checked })}
+          />
+          Uruchamiaj launcher zmaksymalizowany
+        </label>
         <div className="field-hint">
           Launcher wróci sam po zamknięciu gry. Zamknięcie okna w trakcie gry też chowa go do zasobnika — ikona przy
           zegarze pozwala wrócić, uruchomić ostatnie instancje albo zatrzymać grę.

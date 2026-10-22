@@ -1,6 +1,15 @@
 /** What changed in each launcher version, newest first. Add an entry with every release. */
 export const CHANGELOG: Array<{ version: string; date: string; changes: string[] }> = [
   {
+    version: '0.1.30',
+    date: '2026-10-22',
+    changes: [
+      'Paczki na serwer Sztulagz: baner, kolor, tagi, adres serwera, zalecany RAM, linki, wyróżnienie i wersje robocze',
+      'Opcja uruchamiania launchera zmaksymalizowanego (Ustawienia → Zachowanie)',
+      'Launcher zapamiętuje rozmiar i położenie okna'
+    ]
+  },
+  {
     version: '0.1.29',
     date: '2026-10-22',
     changes: [

@@ -1677,3 +1677,165 @@ kbd {
   grid-template-columns: 140px 1fr;
   gap: 12px;
 }
+
+/* Pack card customization: banner, accent, tags, flags */
+.pack-card {
+  position: relative;
+  overflow: hidden;
+}
+.pack-card[style*='--pack-accent'] {
+  border-color: color-mix(in srgb, var(--pack-accent) 45%, transparent);
+  box-shadow: 0 10px 30px -18px var(--pack-accent);
+}
+.pack-card[style*='--pack-accent'] .pack-actions .primary {
+  background: linear-gradient(135deg, var(--pack-accent), color-mix(in srgb, var(--pack-accent) 70%, #000));
+  box-shadow: 0 8px 24px -8px var(--pack-accent);
+}
+.pack-card[style*='--pack-accent'] .pack-icon.placeholder {
+  color: var(--pack-accent);
+  background: color-mix(in srgb, var(--pack-accent) 18%, transparent);
+}
+.pack-card.featured {
+  grid-column: span 2;
+}
+@media (max-width: 1000px) {
+  .pack-card.featured {
+    grid-column: auto;
+  }
+}
+.pack-card.is-hidden {
+  opacity: 0.75;
+  border-style: dashed;
+}
+.pack-banner {
+  margin: -18px -18px 4px;
+  height: 120px;
+  background-size: cover;
+  background-position: center;
+  mask-image: linear-gradient(#000 55%, transparent);
+}
+.pack-card.featured .pack-banner {
+  height: 170px;
+}
+.pack-flags {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+}
+.pack-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.pack-flag.featured {
+  color: #fbbf24;
+}
+.pack-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pack-tags .chip {
+  padding: 3px 10px;
+  font-size: var(--fs-sm);
+  cursor: default;
+}
+.pack-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: var(--fs-sm);
+}
+.pack-links .btn-sm {
+  padding: 4px 8px;
+}
+.pack-server {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-dim);
+}
+.pack-server svg {
+  color: var(--pack-accent, var(--accent));
+}
+
+/* Publish dialog sections */
+/* The scrolling box is a plain div: Chromium scrolls a fieldset's anonymous
+   inner box instead, which overflows the dialog. The fieldset only disables. */
+.publish-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.publish-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.publish-modal {
+  max-height: 88vh;
+}
+.publish-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+.publish-section h4 {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
+}
+.publish-section .toggle-row {
+  margin-top: 0;
+}
+.publish-banner {
+  position: relative;
+  height: 110px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--glass-border-strong);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.publish-banner.has {
+  border-style: solid;
+}
+.publish-banner > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+}
+.publish-banner-actions {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 6px;
+}
+.publish-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}

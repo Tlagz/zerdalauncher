@@ -137,6 +137,7 @@ export const IPC = {
   packsForgetToken: 'packs:forgetToken',
   packsPublish: 'packs:publish',
   packsDelete: 'packs:delete',
+  packsPickBanner: 'packs:pickBanner',
   invitesCreate: 'invites:create',
   invitesFromClipboard: 'invites:fromClipboard',
   invitesPreview: 'invites:preview',

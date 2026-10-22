@@ -13,7 +13,11 @@ import {
   Loader2,
   KeyRound,
   Link2,
-  Package
+  Package,
+  Globe,
+  EyeOff,
+  Star,
+  ExternalLink
 } from 'lucide-react';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
@@ -97,7 +101,25 @@ function PackCard({
   };
 
   return (
-    <div className="pack-card">
+    <div
+      className={`pack-card ${pack.featured ? 'featured' : ''} ${pack.hidden ? 'is-hidden' : ''}`}
+      style={pack.accent ? ({ '--pack-accent': pack.accent } as React.CSSProperties) : undefined}
+    >
+      {pack.banner && <div className="pack-banner" style={{ backgroundImage: `url("${pack.banner}")` }} />}
+      {(pack.featured || pack.hidden) && (
+        <div className="pack-flags">
+          {pack.featured && (
+            <span className="pack-flag featured">
+              <Star size={12} fill="currentColor" /> Wyróżniona
+            </span>
+          )}
+          {pack.hidden && (
+            <span className="pack-flag hidden">
+              <EyeOff size={12} /> Ukryta
+            </span>
+          )}
+        </div>
+      )}
       <div className="pack-head">
         {pack.icon ? <img className="pack-icon" src={pack.icon} alt="" /> : <div className="pack-icon placeholder"><Package size={26} /></div>}
         <div className="pack-title">
@@ -114,6 +136,29 @@ function PackCard({
       <p className="pack-desc" data-no-i18n>
         {pack.description || '—'}
       </p>
+      {!!pack.tags?.length && (
+        <div className="pack-tags" data-no-i18n>
+          {pack.tags.map((t) => (
+            <span className="chip" key={t}>
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+      {(pack.server || pack.links?.length) && (
+        <div className="pack-links">
+          {pack.server && (
+            <span className="pack-server" title="Po instalacji gra wejdzie na ten serwer">
+              <Globe size={13} /> <span data-no-i18n>{pack.server}</span>
+            </span>
+          )}
+          {pack.links?.map((l) => (
+            <button key={l.url} className="ghost btn-sm" onClick={() => openExternal(l.url)}>
+              <ExternalLink size={13} /> {l.label}
+            </button>
+          ))}
+        </div>
+      )}
       {latest && (
         <div className="pack-stats">
           {latest.mods} modów · {formatSize(latest.size)} · {formatDate(Date.parse(pack.updated || latest.date))}
@@ -186,7 +231,6 @@ function OwnerPanel({ status, onStatus }: { status: PublisherStatus; onStatus: (
     return (
       <div className="owner-panel ok">
         <Link2 size={16} /> Publikujesz jako <b>{status.login}</b>
-        {status.repoExists === false && <span className="text-dim"> · repozytorium powstanie przy pierwszej paczce</span>}
         <span className="crash-footer-gap" />
         <button
           className="ghost btn-sm"
@@ -281,7 +325,7 @@ export function PacksPage() {
       <div className="page-header">
         <div>
           <div className="page-title">Paczki Sztulagz</div>
-          <div className="page-subtitle">Modpacki przygotowane przez Sztulagz — instalacja i aktualizacje jednym kliknięciem</div>
+          <div className="page-subtitle">Modpacki na serwer Sztulagz — instalacja i aktualizacje jednym kliknięciem</div>
         </div>
         <div className="header-actions">
           <button className="ghost" onClick={() => load(true)} disabled={loading}>
@@ -302,7 +346,7 @@ export function PacksPage() {
         <div className="empty">
           <Package size={34} className="text-faint" />
           <h2>Jeszcze nie ma paczek</h2>
-          <p>{canPublish ? 'Kliknij „Nowa paczka", żeby opublikować pierwszą instancję.' : 'Sztulagz niedługo coś tu wrzuci.'}</p>
+          <p>{canPublish ? 'Kliknij „Nowa paczka", żeby opublikować pierwszą instancję.' : 'Paczki na serwer Sztulagz pojawią się tutaj wkrótce.'}</p>
         </div>
       )}
       {!packs && (

@@ -524,6 +524,22 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.packsForgetToken, () => packs.forgetToken());
   ipcMain.handle(IPC.packsPublish, (_e, req: PublishRequest) => packs.publishPack(req, packProgress));
   ipcMain.handle(IPC.packsDelete, (_e, packId: string) => packs.deletePack(packId));
+  // Pack banner: a wide image, scaled down to 1280 px and stored as JPEG.
+  ipcMain.handle(IPC.packsPickBanner, async () => {
+    const win = getMainWindow() ?? undefined;
+    const res = await dialog.showOpenDialog(win!, {
+      title: L('Wybierz baner paczki'),
+      properties: ['openFile'],
+      filters: [{ name: L('Obrazy'), extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    if (fs.statSync(res.filePaths[0]).size > 15 * 1024 * 1024) throw new Error('Obraz jest za duży (max 15 MB).');
+    const img = nativeImage.createFromPath(res.filePaths[0]);
+    if (img.isEmpty()) throw new Error('Nie udało się wczytać obrazu (nieobsługiwany format?).');
+    const { width } = img.getSize();
+    const scaled = width > 1280 ? img.resize({ width: 1280, quality: 'best' }) : img;
+    return `data:image/jpeg;base64,${scaled.toJPEG(85).toString('base64')}`;
+  });
   ipcMain.handle(IPC.invitesCreate, (_e, instanceId: string, address: string, name: string, from?: string) =>
     createInvite(instanceId, address, name, from)
   );

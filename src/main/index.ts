@@ -1,7 +1,9 @@
-import { app, BrowserWindow, shell, protocol } from 'electron';
+import { app, BrowserWindow, shell, protocol, screen } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { ensureDirs } from './utils/paths';
+import { ensureDirs, paths } from './utils/paths';
+import { readJson, writeJson } from './utils/store';
+import type { AppSettings } from '../shared/types';
 import { migrateInstanceFolders } from './minecraft/instances';
 import { registerIpc } from './ipc';
 import { importPackFile } from './mods/modpacks';
@@ -65,11 +67,23 @@ async function importExternalPack(filePath: string): Promise<void> {
   }
 }
 
+const WINDOW_FILE = () => path.join(paths.root, 'window.json');
+
+/** Last window size/position, if it still fits on a connected screen. */
+function savedBounds(): { width: number; height: number; x?: number; y?: number } {
+  const b = readJson<{ x?: number; y?: number; width?: number; height?: number }>(WINDOW_FILE(), {});
+  const width = Math.max(980, b.width ?? 1180);
+  const height = Math.max(620, b.height ?? 760);
+  if (b.x === undefined || b.y === undefined) return { width, height };
+  const area = screen.getDisplayMatching({ x: b.x, y: b.y, width, height }).workArea;
+  const visible = b.x + 100 > area.x && b.y >= area.y - 10 && b.x < area.x + area.width - 100 && b.y < area.y + area.height - 50;
+  return visible ? { width, height, x: b.x, y: b.y } : { width, height };
+}
+
 function createWindow(): void {
   const iconPath = path.join(app.getAppPath(), 'build', 'icon.png');
   mainWindow = new BrowserWindow({
-    width: 1180,
-    height: 760,
+    ...savedBounds(),
     minWidth: 980,
     minHeight: 620,
     show: false,
@@ -84,7 +98,18 @@ function createWindow(): void {
     }
   });
 
-  mainWindow.on('ready-to-show', () => mainWindow?.show());
+  mainWindow.on('ready-to-show', () => {
+    if (readJson<Partial<AppSettings>>(paths.settings, {}).startMaximized) mainWindow?.maximize();
+    mainWindow?.show();
+  });
+
+  // Remember the normal (un-maximized) size and position for the next start.
+  const saveBounds = () => {
+    if (!mainWindow || mainWindow.isMinimized()) return;
+    writeJson(WINDOW_FILE(), mainWindow.getNormalBounds());
+  };
+  mainWindow.on('resized', saveBounds);
+  mainWindow.on('moved', saveBounds);
 
   // Closing the window while a game runs keeps the launcher in the tray (crash
   // detection, playtime and Discord status keep working).

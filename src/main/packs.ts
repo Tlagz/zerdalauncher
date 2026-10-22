@@ -10,13 +10,14 @@ import { getInstance, updateInstance } from './minecraft/instances';
 import { listAccounts, activeAccountId } from './auth/accounts';
 import { exportInstance, installZerdaTracked, updateFromZerda, type PackProgress } from './mods/modpacks';
 import { listInstalledContent } from './mods';
-import type { CatalogPack, CatalogVersion, PublishRequest, PublisherStatus } from '../shared/types';
+import type { CatalogPack, CatalogVersion, PackLook, PublishRequest, PublisherStatus } from '../shared/types';
 
 /**
- * Sztulagz packs: curated modpacks listed in packs.json of a public GitHub repo,
- * each version a .zerda release asset. Anyone can install; only the owner
- * (Microsoft account _Tlagz_) gets the publishing UI, and writes need the
- * owner's GitHub token — that token is the real protection.
+ * Sztulagz packs: modpacks for the Sztulagz server, listed in packs.json of a
+ * public GitHub repo, each version a .zerda release asset. Anyone can install;
+ * connecting the repo and publishing is only for the Microsoft account _Tlagz_
+ * (checked here, not just hidden in the UI), and writes need the owner's GitHub
+ * token — that token is the real protection.
  */
 const OWNER_UUID = '52c715ece7d8477cbb7f60337b94d981';
 const OWNER = 'Tlagz';
@@ -34,6 +35,8 @@ interface Catalog {
 // ---------- token ----------
 
 function readToken(): string | null {
+  // A saved token is only ever used while the owner's account is signed in.
+  if (!isOwner()) return null;
   const s = readJson<{ token?: string; encrypted?: boolean }>(TOKEN_FILE(), {});
   if (!s.token) return null;
   try {
@@ -79,8 +82,7 @@ export async function publisherStatus(): Promise<PublisherStatus> {
   if (!readToken()) return { isOwner: true };
   try {
     const user = await gh<{ login: string }>('https://api.github.com/user');
-    const repo = await fetch(API, { headers: UA });
-    return { isOwner: true, login: user.login, repoExists: repo.ok };
+    return { isOwner: true, login: user.login };
   } catch {
     return { isOwner: true };
   }
@@ -100,6 +102,7 @@ export async function setToken(token: string): Promise<PublisherStatus> {
 }
 
 export function forgetToken(): void {
+  if (!isOwner()) throw new Error('Publikować może tylko konto _Tlagz_.');
   fs.rmSync(TOKEN_FILE(), { force: true });
 }
 
@@ -127,8 +130,29 @@ async function loadCatalog(fresh = false): Promise<{ catalog: Catalog; sha?: str
   return { catalog, sha };
 }
 
+/** Featured first; drafts (hidden) only for the owner. */
 export async function listPacks(fresh = false): Promise<CatalogPack[]> {
-  return (await loadCatalog(fresh)).catalog.packs;
+  const owner = isOwner();
+  return (await loadCatalog(fresh)).catalog.packs
+    .filter((p) => owner || !p.hidden)
+    .sort((a, b) => Number(!!b.featured) - Number(!!a.featured));
+}
+
+/** Keep only sane values from the publish form (the catalog is public data). */
+function cleanLook(look: Omit<PackLook, 'banner'> = {}): Omit<PackLook, 'banner'> {
+  const server = look.server?.trim();
+  return {
+    accent: look.accent && /^#[0-9a-f]{6}$/i.test(look.accent) ? look.accent : undefined,
+    tags: (look.tags ?? []).map((t) => t.trim().slice(0, 20)).filter(Boolean).slice(0, 6),
+    server: server && /^[\w.\-:[\]]{1,255}$/.test(server) ? server : undefined,
+    ramMb: look.ramMb && look.ramMb >= 1024 && look.ramMb <= 32768 ? Math.round(look.ramMb / 512) * 512 : undefined,
+    featured: !!look.featured || undefined,
+    hidden: !!look.hidden || undefined,
+    links: (look.links ?? [])
+      .filter((l) => /^https:\/\//.test(l.url) && l.label.trim())
+      .map((l) => ({ label: l.label.trim().slice(0, 24), url: l.url.trim() }))
+      .slice(0, 4)
+  };
 }
 
 async function saveCatalog(catalog: Catalog, sha: string | undefined, message: string): Promise<void> {
@@ -157,7 +181,12 @@ export async function installPack(packId: string, progress: PackProgress): Promi
   if (!pack || !v) throw new Error('Nie znaleziono paczki.');
   const file = await downloadVersion(v, progress);
   const { instanceId, files } = await installZerdaTracked(file, pack.name, progress);
-  writeJson(PACK_FILE(instanceId), { id: pack.id, version: v.version, files });
+  writeJson(PACK_FILE(instanceId), { id: pack.id, version: v.version, files, server: pack.server });
+  // The pack's server and RAM become the instance's defaults.
+  updateInstance(instanceId, {
+    ...(pack.server ? { serverAddress: pack.server } : {}),
+    ...(pack.ramMb ? { ramMb: pack.ramMb } : {})
+  });
   if (pack.icon) {
     const icon = await fetch(pack.icon).then((r) => (r.ok ? r.buffer() : null)).catch(() => null);
     if (icon) updateInstance(instanceId, { icon: `data:image/png;base64,${icon.toString('base64')}` });
@@ -174,14 +203,17 @@ export async function updatePackInstance(instanceId: string, progress: PackProgr
   const v = pack?.versions[0];
   if (!pack || !v) throw new Error('Paczka nie jest już dostępna.');
   const file = await downloadVersion(v, progress);
-  const prev = readJson<{ files?: string[] }>(PACK_FILE(instanceId), {}).files ?? [];
-  const res = await updateFromZerda(instanceId, file, prev, progress);
-  writeJson(PACK_FILE(instanceId), { id: pack.id, version: v.version, files: res.files });
+  const prevInfo = readJson<{ files?: string[]; server?: string }>(PACK_FILE(instanceId), {});
+  const res = await updateFromZerda(instanceId, file, prevInfo.files ?? [], progress);
+  writeJson(PACK_FILE(instanceId), { id: pack.id, version: v.version, files: res.files, server: pack.server });
+  // Follow a changed server address — unless the player set their own.
+  const ownServer = inst.serverAddress && inst.serverAddress !== prevInfo.server;
   updateInstance(instanceId, {
     pack: { id: pack.id, version: v.version },
     mcVersion: res.mcVersion,
     loader: res.loader,
-    loaderVersion: res.loaderVersion
+    loaderVersion: res.loaderVersion,
+    ...(pack.server && !ownServer ? { serverAddress: pack.server } : {})
   });
 }
 
@@ -204,16 +236,18 @@ async function ensureRepo(): Promise<void> {
   if (res.ok) return;
   await gh('https://api.github.com/user/repos', {
     method: 'POST',
-    body: { name: REPO, description: 'Paczki Sztulagz dla ZerdaLaunchera', private: false, auto_init: true }
+    body: { name: REPO, description: 'Paczki na serwer Sztulagz dla ZerdaLaunchera', private: false, auto_init: true }
   });
 }
 
-async function putIcon(packId: string, dataUrl: string, message: string): Promise<string> {
-  const m = dataUrl.match(/^data:image\/png;base64,(.+)$/);
-  if (!m) throw new Error('Ikona musi być obrazem PNG.');
-  const file = `icons/${packId}.png`;
+/** Upload an icon or banner image into the repo; returns its raw URL. */
+async function putImage(packId: string, kind: 'icon' | 'banner', dataUrl: string, message: string): Promise<string> {
+  const m = dataUrl.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/);
+  if (!m) throw new Error('Obraz musi być w formacie PNG, JPG lub WebP.');
+  const ext = m[1] === 'jpeg' ? 'jpg' : m[1];
+  const file = `${kind === 'icon' ? 'icons' : 'banners'}/${packId}.${ext}`;
   const existing = await gh<{ sha: string }>(`${API}/contents/${file}`).catch(() => null);
-  await gh(`${API}/contents/${file}`, { method: 'PUT', body: { message, content: m[1], ...(existing ? { sha: existing.sha } : {}) } });
+  await gh(`${API}/contents/${file}`, { method: 'PUT', body: { message, content: m[2], ...(existing ? { sha: existing.sha } : {}) } });
   return `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${file}?v=${Date.now()}`;
 }
 
@@ -232,6 +266,7 @@ export async function publishPack(req: PublishRequest, progress: PackProgress): 
   }
   pack.name = req.name.trim().slice(0, 60) || pack.name;
   pack.description = req.description.trim().slice(0, 2000);
+  if (req.look) Object.assign(pack, cleanLook(req.look));
 
   if (req.instanceId) {
     const inst = getInstance(req.instanceId);
@@ -243,10 +278,11 @@ export async function publishPack(req: PublishRequest, progress: PackProgress): 
     progress(0, 4, 'Pakuję instancję…');
     const out = path.join(paths.cache, 'packs', `${pack.id}-${version}.zerda`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
+    const include = req.include ?? { resourcepacks: true, shaderpacks: true, options: false };
     await exportInstance(
       inst.id,
       out,
-      { format: 'zerda', config: true, resourcepacks: true, shaderpacks: true, options: false, worlds: [] },
+      { format: 'zerda', config: true, ...include, worlds: [] },
       (c, t, m) => progress(0, 4, m)
     );
     const data = fs.readFileSync(out);
@@ -282,8 +318,10 @@ export async function publishPack(req: PublishRequest, progress: PackProgress): 
     updateInstance(inst.id, { pack: { id: pack.id, version } });
   }
 
-  progress(2, 4, 'Aktualizuję ikonę…');
-  if (req.icon) pack.icon = await putIcon(pack.id, req.icon, `Ikona: ${pack.name}`);
+  progress(2, 4, 'Aktualizuję wygląd…');
+  if (req.icon) pack.icon = await putImage(pack.id, 'icon', req.icon, `Ikona: ${pack.name}`);
+  if (req.banner) pack.banner = await putImage(pack.id, 'banner', req.banner, `Baner: ${pack.name}`);
+  else if (req.banner === null) delete pack.banner;
   pack.updated = new Date().toISOString();
   progress(3, 4, 'Zapisuję listę paczek…');
   await saveCatalog(

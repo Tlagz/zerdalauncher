@@ -74,6 +74,8 @@ export interface AppSettings {
   themePresets?: ThemePreset[];
   /** Interface language (default Polish). */
   language?: 'pl' | 'en';
+  /** Open the launcher window maximized. */
+  startMaximized?: boolean;
 }
 
 /** Mod loader build versions for a given MC version, split into stable/unstable. */
@@ -436,7 +438,25 @@ export interface CatalogVersion {
   mods: number;
 }
 
-export interface CatalogPack {
+/** How a pack card looks and what an install sets up (editable without a new version). */
+export interface PackLook {
+  /** Wide image on top of the card. */
+  banner?: string;
+  /** Card accent color (#rrggbb). */
+  accent?: string;
+  tags?: string[];
+  /** Server the instance auto-joins after install (Quick Play). */
+  server?: string;
+  /** RAM given to the installed instance, MB. */
+  ramMb?: number;
+  /** Shown first and larger. */
+  featured?: boolean;
+  /** Draft: only the owner sees it. */
+  hidden?: boolean;
+  links?: Array<{ label: string; url: string }>;
+}
+
+export interface CatalogPack extends PackLook {
   id: string;
   name: string;
   description: string;
@@ -457,8 +477,13 @@ export interface PublishRequest {
   description: string;
   /** PNG data URL; undefined keeps the current icon. */
   icon?: string;
+  /** Image data URL; undefined keeps the current banner, null removes it. */
+  banner?: string | null;
+  look?: Omit<PackLook, 'banner'>;
   version?: string;
   changelog?: string;
+  /** What goes into a released version besides mods and configs. */
+  include?: { resourcepacks: boolean; shaderpacks: boolean; options: boolean };
 }
 
 export interface PublisherStatus {

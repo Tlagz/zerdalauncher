@@ -394,7 +394,9 @@ const api = {
     setToken: (token: string): Promise<PublisherStatus> => ipcRenderer.invoke(IPC.packsSetToken, token),
     forgetToken: (): Promise<void> => ipcRenderer.invoke(IPC.packsForgetToken),
     publish: (req: PublishRequest): Promise<CatalogPack> => ipcRenderer.invoke(IPC.packsPublish, req),
-    delete: (packId: string): Promise<void> => ipcRenderer.invoke(IPC.packsDelete, packId)
+    delete: (packId: string): Promise<void> => ipcRenderer.invoke(IPC.packsDelete, packId),
+    /** Owner: pick a banner image (JPEG data URL, max 1280 px wide). */
+    pickBanner: (): Promise<string | null> => ipcRenderer.invoke(IPC.packsPickBanner)
   },
   map: {
     /** Open a world for the 2D map; tiles load from map.tileUrl(). */
