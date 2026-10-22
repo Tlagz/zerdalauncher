@@ -8,6 +8,7 @@ import { Sidebar } from './components/Sidebar';
 import { HomePage } from './components/HomePage';
 import { InstancesPage } from './components/InstancesPage';
 import { ScreenshotsPage } from './components/ScreenshotsPage';
+import { PacksPage } from './components/PacksPage';
 import { ServersPage } from './components/ServersPage';
 import { AccountsPage } from './components/AccountsPage';
 import { SettingsPage } from './components/SettingsPage';
@@ -114,6 +115,7 @@ export default function App() {
           <div key={page} className="page-body">
             {page === 'home' && <HomePage />}
             {page === 'instances' && <InstancesPage />}
+            {page === 'packs' && <PacksPage />}
             {page === 'screenshots' && <ScreenshotsPage />}
             {page === 'servers' && <ServersPage />}
             {page === 'accounts' && <AccountsPage />}

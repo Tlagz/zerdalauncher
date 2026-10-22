@@ -1,6 +1,14 @@
 /** What changed in each launcher version, newest first. Add an entry with every release. */
 export const CHANGELOG: Array<{ version: string; date: string; changes: string[] }> = [
   {
+    version: '0.1.29',
+    date: '2026-10-22',
+    changes: [
+      'Zakładka Paczki Sztulagz: modpacki do zainstalowania i aktualizowania jednym kliknięciem',
+      'Poprawka: po zamknięciu okienka nie zostaje już rozmyta plama zasłaniająca treść'
+    ]
+  },
+  {
     version: '0.1.28',
     date: '2026-10-21',
     changes: ['Poprawka: zaproszenie ze schowka pokazuje się tylko raz, a nie przy każdym uruchomieniu']

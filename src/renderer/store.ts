@@ -21,7 +21,7 @@ import type {
 export type InstancesAction = 'create' | 'modpacks' | 'import';
 
 interface UiState {
-  page: 'home' | 'instances' | 'screenshots' | 'servers' | 'accounts' | 'customize' | 'settings';
+  page: 'home' | 'instances' | 'packs' | 'screenshots' | 'servers' | 'accounts' | 'customize' | 'settings';
   setPage: (p: UiState['page']) => void;
 
   instances: Instance[];

@@ -31,6 +31,9 @@ import type {
   GameStats,
   MapInfo,
   MapTarget,
+  CatalogPack,
+  PublishRequest,
+  PublisherStatus,
   McNewsEntry,
   McPatchNotes,
   PlaySession,
@@ -381,6 +384,17 @@ const api = {
         ipcRenderer.off(IPC.invitesOpened, fn);
       };
     }
+  },
+  packs: {
+    list: (fresh = false): Promise<CatalogPack[]> => ipcRenderer.invoke(IPC.packsList, fresh),
+    /** Installs as a new instance; progress via modpacks.onProgress. */
+    install: (packId: string): Promise<string> => ipcRenderer.invoke(IPC.packsInstall, packId),
+    update: (instanceId: string): Promise<void> => ipcRenderer.invoke(IPC.packsUpdate, instanceId),
+    status: (): Promise<PublisherStatus> => ipcRenderer.invoke(IPC.packsStatus),
+    setToken: (token: string): Promise<PublisherStatus> => ipcRenderer.invoke(IPC.packsSetToken, token),
+    forgetToken: (): Promise<void> => ipcRenderer.invoke(IPC.packsForgetToken),
+    publish: (req: PublishRequest): Promise<CatalogPack> => ipcRenderer.invoke(IPC.packsPublish, req),
+    delete: (packId: string): Promise<void> => ipcRenderer.invoke(IPC.packsDelete, packId)
   },
   map: {
     /** Open a world for the 2D map; tiles load from map.tileUrl(). */

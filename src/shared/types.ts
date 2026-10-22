@@ -26,6 +26,8 @@ export interface Instance {
   dir?: string;
   /** User-defined group the instance is listed under (empty = ungrouped). */
   group?: string;
+  /** Installed from a Sztulagz pack (for updates). */
+  pack?: { id: string; version: string };
 }
 
 export interface Account {
@@ -420,4 +422,48 @@ export interface MapInfo {
   dims: Partial<Record<MapDimension, Array<[number, number]>>>;
   spawn?: { x: number; z: number };
   player?: { x: number; z: number; dim: MapDimension };
+}
+
+// --- Sztulagz packs (curated modpacks published from the launcher) ---
+export interface CatalogVersion {
+  version: string;
+  date: string;
+  changelog: string;
+  /** .zerda download (GitHub release asset). */
+  url: string;
+  size: number;
+  sha1: string;
+  mods: number;
+}
+
+export interface CatalogPack {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string;
+  mcVersion: string;
+  loader: ModLoader;
+  loaderVersion?: string;
+  updated: string;
+  /** Newest first. */
+  versions: CatalogVersion[];
+}
+
+/** Owner publishing: create a pack, release a new version, or only edit its card. */
+export interface PublishRequest {
+  packId?: string;
+  instanceId?: string;
+  name: string;
+  description: string;
+  /** PNG data URL; undefined keeps the current icon. */
+  icon?: string;
+  version?: string;
+  changelog?: string;
+}
+
+export interface PublisherStatus {
+  isOwner: boolean;
+  /** GitHub login of the saved token, when one is set. */
+  login?: string;
+  repoExists?: boolean;
 }

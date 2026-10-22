@@ -27,6 +27,7 @@ import { createInvite, inviteFromClipboard, previewInvite, acceptInvite } from '
 import { monitorGame } from './minecraft/gameMonitor';
 import { setTrayTooltip, showWindow, trayNotice } from './tray';
 import { openMap } from './map';
+import * as packs from './packs';
 import { readPlaylog, logSession } from './minecraft/playlog';
 import { listSavedServers } from './minecraft/savedServers';
 import { pingServer } from './minecraft/serverPing';
@@ -104,7 +105,7 @@ import {
 } from './server';
 import { initTunnel, startTunnel, stopTunnel } from './server/tunnel';
 import { serverDir } from './utils/paths';
-import type { AppSettings, ContentKind, CrashFix, ExportOptions, Instance, Invite, MapTarget } from '../shared/types';
+import type { AppSettings, ContentKind, CrashFix, ExportOptions, Instance, Invite, MapTarget, PublishRequest } from '../shared/types';
 import type { ThemePresetFile } from '../shared/appearance';
 import { tr } from '../shared/i18n';
 import type { LaunchStatus, DownloadProgress } from '../shared/types';
@@ -515,6 +516,14 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.newsPatchNotes, (_e, contentPath: string) => minecraftPatchNotes(contentPath));
   ipcMain.handle(IPC.statsPlaylog, () => readPlaylog());
   ipcMain.handle(IPC.mapOpen, (_e, target: MapTarget) => openMap(target));
+  ipcMain.handle(IPC.packsList, (_e, fresh?: boolean) => packs.listPacks(!!fresh));
+  ipcMain.handle(IPC.packsInstall, (_e, packId: string) => packs.installPack(packId, packProgress));
+  ipcMain.handle(IPC.packsUpdate, (_e, instanceId: string) => packs.updatePackInstance(instanceId, packProgress));
+  ipcMain.handle(IPC.packsStatus, () => packs.publisherStatus());
+  ipcMain.handle(IPC.packsSetToken, (_e, token: string) => packs.setToken(token));
+  ipcMain.handle(IPC.packsForgetToken, () => packs.forgetToken());
+  ipcMain.handle(IPC.packsPublish, (_e, req: PublishRequest) => packs.publishPack(req, packProgress));
+  ipcMain.handle(IPC.packsDelete, (_e, packId: string) => packs.deletePack(packId));
   ipcMain.handle(IPC.invitesCreate, (_e, instanceId: string, address: string, name: string, from?: string) =>
     createInvite(instanceId, address, name, from)
   );

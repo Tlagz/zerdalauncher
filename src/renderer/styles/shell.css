@@ -296,6 +296,13 @@
 html[data-vt='close'] .main {
   view-transition-name: none;
 }
+/* A captured element's backdrop blur gets baked into the page snapshot behind
+   it and lingers as a blurred patch until the transition ends — drop the blur
+   while a modal closes (the modal is nearly opaque anyway). */
+html[data-vt='close'] :is(.modal, .palette) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 ::view-transition-group(*) {
   animation-duration: var(--dur-slow);
   animation-timing-function: var(--ease-out);

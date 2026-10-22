@@ -1,4 +1,4 @@
-import { House, Gamepad2, Server, Users, Brush, Settings, Search, Images } from 'lucide-react';
+import { House, Gamepad2, Server, Users, Brush, Settings, Search, Images, Crown } from 'lucide-react';
 import { useStore } from '../store';
 import { AccountAvatar } from './AccountAvatar';
 import { transition } from '../ui/viewTransition';
@@ -8,6 +8,7 @@ import logo from '../assets/logo.png';
 const NAV = [
   { id: 'home', label: 'Start', icon: House },
   { id: 'instances', label: 'Instancje', icon: Gamepad2 },
+  { id: 'packs', label: 'Paczki Sztulagz', icon: Crown },
   { id: 'screenshots', label: 'Zrzuty', icon: Images },
   { id: 'servers', label: 'Serwery', icon: Server },
   { id: 'accounts', label: 'Konta', icon: Users },

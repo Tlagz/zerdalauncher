@@ -49,19 +49,28 @@ function safeJoin(gameDir: string, rel: string): string {
   return dest;
 }
 
-function extractOverrides(zip: AdmZip, gameDir: string, prefixes: string[]): void {
+/** Unpack overrides into the game folder; returns the relative paths written. */
+function extractOverrides(
+  zip: AdmZip,
+  gameDir: string,
+  prefixes: string[],
+  skip: (rel: string) => boolean = () => false
+): string[] {
+  const written: string[] = [];
   for (const e of zip.getEntries()) {
     if (e.isDirectory) continue;
     for (const prefix of prefixes) {
       if (e.entryName.startsWith(prefix)) {
         const rel = e.entryName.slice(prefix.length);
-        if (!rel) continue;
+        if (!rel || skip(rel)) continue;
         const dest = safeJoin(gameDir, rel);
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         fs.writeFileSync(dest, e.getData());
+        written.push(rel);
       }
     }
   }
+  return written;
 }
 
 // ---------- Modrinth .mrpack ----------
@@ -140,21 +149,36 @@ interface ZerdaManifest {
 }
 type ModsMeta = Record<string, { provider: string; projectId: string; fileId: string; title: string }>;
 
-async function installFromZerda(zip: AdmZip, name: string, progress: PackProgress): Promise<string> {
+function readZerdaManifest(zip: AdmZip): ZerdaManifest {
   const entry = zip.getEntry(ZERDA_MANIFEST);
   if (!entry) throw new Error('Nieprawidłowy plik .zerda (brak zerda.manifest.json).');
-  const manifest = JSON.parse(entry.getData().toString('utf8')) as ZerdaManifest;
+  return JSON.parse(entry.getData().toString('utf8')) as ZerdaManifest;
+}
 
-  const inst = createInstance({
-    name: name || manifest.name,
-    mcVersion: manifest.mcVersion,
-    loader: manifest.loader,
-    loaderVersion: manifest.loaderVersion,
-    ramMb: manifest.ramMb || defaultRam()
-  });
-  const gameDir = instanceGameDir(inst.id);
-  const modsMeta: ModsMeta = {};
+/**
+ * Put a .zerda's content into an instance and return the relative paths it
+ * wrote. With `previous` (an update), files the old pack version wrote are
+ * removed first, and the player's own settings and worlds are left alone.
+ */
+async function applyZerda(zip: AdmZip, instanceId: string, progress: PackProgress, previous?: string[]): Promise<string[]> {
+  const manifest = readZerdaManifest(zip);
+  const gameDir = instanceGameDir(instanceId);
+  const metaFile = path.join(instanceDir(instanceId), 'mods.json');
+  const modsMeta: ModsMeta = previous ? readJson<ModsMeta>(metaFile, {}) : {};
 
+  if (previous) {
+    for (const rel of previous) {
+      try {
+        fs.rmSync(safeJoin(gameDir, rel), { force: true });
+        fs.rmSync(safeJoin(gameDir, rel + '.disabled'), { force: true });
+      } catch {
+        /* already gone */
+      }
+      delete modsMeta[baseName(path.basename(rel))];
+    }
+  }
+
+  const written: string[] = [];
   let done = 0;
   const files = manifest.files ?? [];
   await mapLimit(files, 8, async (f) => {
@@ -162,6 +186,7 @@ async function installFromZerda(zip: AdmZip, name: string, progress: PackProgres
     const resolved = await modrinth.getVersionById(f.fileId);
     const dest = safeJoin(gameDir, f.path);
     await downloadFile(resolved.url, dest, resolved.sha1);
+    written.push(f.path);
     modsMeta[baseName(path.basename(f.path))] = {
       provider: f.provider,
       projectId: f.projectId,
@@ -171,9 +196,59 @@ async function installFromZerda(zip: AdmZip, name: string, progress: PackProgres
     progress(++done, files.length, f.path);
   });
 
-  writeJson(path.join(instanceDir(inst.id), 'mods.json'), modsMeta);
-  extractOverrides(zip, gameDir, ['overrides/']);
+  writeJson(metaFile, modsMeta);
+  // On an update the player's options, server list and worlds win over the pack's.
+  const keep = (rel: string) =>
+    !!previous &&
+    (rel.startsWith('saves/') ||
+      (['options.txt', 'optionsof.txt', 'optionsshaders.txt', 'servers.dat'].includes(rel) &&
+        fs.existsSync(path.join(gameDir, rel))));
+  written.push(...extractOverrides(zip, gameDir, ['overrides/'], keep));
+  return written;
+}
+
+async function installFromZerda(zip: AdmZip, name: string, progress: PackProgress): Promise<string> {
+  const manifest = readZerdaManifest(zip);
+  const inst = createInstance({
+    name: name || manifest.name,
+    mcVersion: manifest.mcVersion,
+    loader: manifest.loader,
+    loaderVersion: manifest.loaderVersion,
+    ramMb: manifest.ramMb || defaultRam()
+  });
+  await applyZerda(zip, inst.id, progress);
   return inst.id;
+}
+
+/** Install a .zerda as a new instance; also returns which files came from the pack. */
+export async function installZerdaTracked(
+  filePath: string,
+  name: string,
+  progress: PackProgress
+): Promise<{ instanceId: string; files: string[] }> {
+  const zip = new AdmZip(filePath);
+  const manifest = readZerdaManifest(zip);
+  const inst = createInstance({
+    name: name || manifest.name,
+    mcVersion: manifest.mcVersion,
+    loader: manifest.loader,
+    loaderVersion: manifest.loaderVersion,
+    ramMb: manifest.ramMb || defaultRam()
+  });
+  return { instanceId: inst.id, files: await applyZerda(zip, inst.id, progress) };
+}
+
+/** Update an instance in place from a newer .zerda of the same pack. */
+export async function updateFromZerda(
+  instanceId: string,
+  filePath: string,
+  previous: string[],
+  progress: PackProgress
+): Promise<{ files: string[]; mcVersion: string; loader: ModLoader; loaderVersion?: string }> {
+  const zip = new AdmZip(filePath);
+  const manifest = readZerdaManifest(zip);
+  const files = await applyZerda(zip, instanceId, progress, previous);
+  return { files, mcVersion: manifest.mcVersion, loader: manifest.loader, loaderVersion: manifest.loaderVersion };
 }
 
 // ---------- CurseForge .zip ----------

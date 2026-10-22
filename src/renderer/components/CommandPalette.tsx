@@ -18,6 +18,7 @@ import {
   CornerDownLeft,
   UserPlus,
   Images,
+  Crown,
   type LucideIcon
 } from 'lucide-react';
 import { useStore, type InstancesAction } from '../store';
@@ -72,6 +73,7 @@ function score(query: string, text: string): number {
 const PAGES: Array<{ id: Page; label: string; icon: LucideIcon; keywords: string }> = [
   { id: 'home', label: 'Start', icon: House, keywords: 'home główna ostatnio grane skin' },
   { id: 'instances', label: 'Instancje', icon: Gamepad2, keywords: 'gry paczki modpacki' },
+  { id: 'packs', label: 'Paczki Sztulagz', icon: Crown, keywords: 'modpacki paczki sztulagz tlagz' },
   { id: 'screenshots', label: 'Zrzuty', icon: Images, keywords: 'screenshoty zdjęcia galeria f2' },
   { id: 'servers', label: 'Serwery', icon: Server, keywords: 'hosting udostępnij playit upnp' },
   { id: 'accounts', label: 'Konta', icon: Users, keywords: 'skiny microsoft offline login' },
