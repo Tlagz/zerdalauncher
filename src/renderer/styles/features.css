@@ -1955,3 +1955,149 @@ kbd {
 .copy-servers {
   margin-top: 8px;
 }
+
+/* ---------- Dostosuj Start ---------- */
+.home-layout.single {
+  grid-template-columns: 1fr;
+}
+.home-customize-modal {
+  width: 900px;
+}
+.home-customize-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 0;
+}
+@media (max-width: 760px) {
+  .home-customize-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.home-customize-col {
+  min-width: 0;
+}
+.home-customize-col-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.home-customize-col-head .text-faint {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+.home-customize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+  padding: 6px;
+  border-radius: var(--radius);
+  border: 1px dashed var(--glass-border);
+  background: var(--glass-1, rgba(255, 255, 255, 0.02));
+  position: relative;
+}
+.home-customize-list.drop-end::after {
+  content: '';
+  height: 3px;
+  border-radius: 3px;
+  background: var(--accent-strong);
+}
+.home-customize-empty {
+  margin: auto;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+.home-customize-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border);
+  cursor: grab;
+  transition: opacity 0.2s, background 0.2s, transform 0.25s var(--ease-spring);
+}
+.home-customize-row:hover {
+  background: var(--glass-3, var(--glass-2));
+  border-color: var(--glass-border-strong);
+}
+.home-customize-row.off .home-customize-icon,
+.home-customize-row.off .home-customize-text {
+  opacity: 0.45;
+}
+.home-customize-row.dragging {
+  opacity: 0.35;
+}
+.home-customize-row.drop-before::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: -5px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--accent-strong);
+}
+.home-customize-grip {
+  flex: none;
+  color: var(--text-faint);
+}
+.home-customize-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-strong);
+}
+.home-customize-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.home-customize-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-customize-desc {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Shown on hover only, so names have room the rest of the time. */
+.home-customize-actions {
+  display: none;
+  gap: 2px;
+}
+.home-customize-row:hover .home-customize-actions,
+.home-customize-row:focus-within .home-customize-actions {
+  display: flex;
+}
+.home-customize-actions .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+.home-customize-switch {
+  flex: none;
+  display: flex;
+  cursor: pointer;
+}
+.home-customize-recent .segmented {
+  margin-top: 6px;
+}

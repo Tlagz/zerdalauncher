@@ -76,6 +76,26 @@ export interface AppSettings {
   language?: 'pl' | 'en';
   /** Open the launcher window maximized. */
   startMaximized?: boolean;
+  /** Which Home sections show, in which column and order. */
+  home?: HomeLayout;
+}
+
+export type HomeSectionId =
+  | 'banner'
+  | 'sztulagz'
+  | 'recent'
+  | 'servers'
+  | 'stats'
+  | 'skin'
+  | 'launcher'
+  | 'minecraft';
+
+export interface HomeLayout {
+  main: HomeSectionId[];
+  side: HomeSectionId[];
+  hidden: HomeSectionId[];
+  /** How many "recently played" cards to show. */
+  recentCount?: number;
 }
 
 /** Mod loader build versions for a given MC version, split into stable/unstable. */

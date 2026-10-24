@@ -1,6 +1,14 @@
 /** What changed in each launcher version, newest first. Add an entry with every release. */
 export const CHANGELOG: Array<{ version: string; date: string; changes: string[] }> = [
   {
+    version: '0.1.32',
+    date: '2026-10-24',
+    changes: [
+      'Dostosuj Start: ukrywaj sekcje, zmieniaj ich kolejność i przenoś między kolumnami',
+      'Wybór, ile instancji pokazuje „Ostatnio grane”'
+    ]
+  },
+  {
     version: '0.1.31',
     date: '2026-10-22',
     changes: [

@@ -19,6 +19,7 @@ import {
   UserPlus,
   Images,
   Crown,
+  SlidersHorizontal,
   type LucideIcon
 } from 'lucide-react';
 import { useStore, type InstancesAction } from '../store';
@@ -201,6 +202,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
       { id: 'act:create', label: 'Nowa instancja', section: 'Akcje', icon: Plus, keywords: 'stwórz dodaj', run: () => instancesAction('create') },
       { id: 'act:import', label: 'Importuj paczkę', section: 'Akcje', icon: Import, keywords: 'mrpack zerda zip', run: () => instancesAction('import') },
       { id: 'act:packs', label: 'Przeglądaj modpacki', section: 'Akcje', icon: Boxes, keywords: 'modrinth curseforge', run: () => instancesAction('modpacks') },
+      { id: 'act:home', label: 'Dostosuj Start', section: 'Akcje', icon: SlidersHorizontal, keywords: 'strona główna sekcje układ ukryj kolejność', run: () => go('home', () => useStore.setState({ homeCustomize: true })) },
       {
         id: 'act:invite',
         label: 'Dołącz z zaproszenia (schowek)',

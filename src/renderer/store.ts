@@ -47,6 +47,8 @@ interface UiState {
   openInstance: (id: string | null) => void;
   pendingAction: InstancesAction | null;
   paletteOpen: boolean;
+  /** Open the Home section editor (set from the command palette). */
+  homeCustomize: boolean;
   /** A server invite to show (opened via zerda:// or found in the clipboard). */
   invite: { invite: Invite; link: string } | null;
 
@@ -92,6 +94,7 @@ export const useStore = create<UiState>((set) => ({
   openInstance: (id) => set({ selectedInstanceId: id, ...(id ? { page: 'instances' as const } : {}) }),
   pendingAction: null,
   paletteOpen: false,
+  homeCustomize: false,
   invite: null,
   logs: {},
   clearLogs: (instanceId) =>

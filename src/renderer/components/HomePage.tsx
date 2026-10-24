@@ -1,21 +1,22 @@
-import { useEffect, useState } from 'react';
-import { Clock, CalendarDays, Earth, Globe, Palette, MousePointer2, ArrowRight } from 'lucide-react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { Clock, CalendarDays, Earth, Globe, Palette, MousePointer2, ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { LaunchButton } from './LaunchButton';
 import { useStore } from '../store';
 import { useLaunch } from '../hooks/useLaunch';
 import { InstanceIcon } from './InstanceIcon';
 import { SkinView } from './SkinView';
 import { SkinLibraryModal } from './SkinLibraryModal';
-import { HomeNews, NewReleaseBanner } from './HomeNews';
+import { LauncherCard, MinecraftCard, NewReleaseBanner } from './HomeNews';
+import { HomeCustomizeModal } from './HomeCustomizeModal';
+import { resolveHome } from '../homeLayout';
 import { HomeStats } from './HomeStats';
 import { HomeServers } from './HomeServers';
 import { HomeSztulagz } from './HomeSztulagz';
 import { alertDialog } from '../ui/feedback';
 import { formatDate, formatPlaytime } from '../format';
 import { transition } from '../ui/viewTransition';
-import type { Instance, WorldInfo } from '../../shared/types';
+import type { HomeSectionId, Instance, WorldInfo } from '../../shared/types';
 
-const RECENT_LIMIT = 2;
 const WORLDS_PER_CARD = 3;
 
 function RecentInstanceRow({ instance }: { instance: Instance }) {
@@ -105,12 +106,71 @@ function RecentInstanceRow({ instance }: { instance: Instance }) {
 export function HomePage() {
   const { instances, accounts, activeAccountId, setPage } = useStore();
   const active = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
+  const home = resolveHome(useStore((s) => s.settings?.home));
   const [showSkins, setShowSkins] = useState(false);
+  const [customizing, setCustomizing] = useState(false);
+  const wantCustomize = useStore((s) => s.homeCustomize);
+
+  // Opened from the command palette.
+  useEffect(() => {
+    if (!wantCustomize) return;
+    setCustomizing(true);
+    useStore.setState({ homeCustomize: false });
+  }, [wantCustomize]);
 
   const recent = instances
     .filter((i) => i.lastPlayed)
     .sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))
-    .slice(0, RECENT_LIMIT);
+    .slice(0, home.recentCount);
+
+  const sections: Record<HomeSectionId, () => ReactNode> = {
+    banner: () => <NewReleaseBanner />,
+    sztulagz: () => <HomeSztulagz />,
+    recent: () => (
+      <div className="section">
+        <h3>Ostatnio grane</h3>
+        {recent.length === 0 ? (
+          <div className="mod-empty">
+            <p>Jeszcze nic nie grane.</p>
+            <button className="ghost" onClick={() => transition(() => setPage('instances'))}>
+              Przejdź do instancji <ArrowRight size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="home-recent-grid">
+            {recent.map((i) => (
+              <RecentInstanceRow key={i.id} instance={i} />
+            ))}
+          </div>
+        )}
+      </div>
+    ),
+    servers: () => <HomeServers />,
+    stats: () => <HomeStats />,
+    skin: () =>
+      active && (
+        <div className="section home-hero">
+          <div className="skin-type">{active.type === 'microsoft' ? 'Microsoft · Premium' : 'Konto offline'}</div>
+          <div className="skin-name">{active.username}</div>
+          <div className="skin-stage">
+            <SkinView account={active} key={active.id} width={150} height={210} />
+          </div>
+          <div className="skin-hint">
+            <MousePointer2 size={13} /> Przeciągnij, aby obrócić
+          </div>
+          <button className="primary" onClick={() => setShowSkins(true)}>
+            <Palette size={16} /> Biblioteka skinów
+          </button>
+        </div>
+      ),
+    launcher: () => <LauncherCard />,
+    minecraft: () => <MinecraftCard />
+  };
+
+  const column = (ids: HomeSectionId[]) =>
+    ids.filter((id) => !home.hidden.includes(id)).map((id) => <Fragment key={id}>{sections[id]()}</Fragment>);
+  const main = column(home.main);
+  const side = column(home.side);
 
   return (
     <>
@@ -119,56 +179,29 @@ export function HomePage() {
           <div className="page-title">Start</div>
           <div className="page-subtitle">Twoja postać, ostatnio grane paczki i nowości</div>
         </div>
+        <div className="header-actions">
+          <button className="ghost" onClick={() => setCustomizing(true)}>
+            <SlidersHorizontal size={16} /> Dostosuj
+          </button>
+        </div>
       </div>
 
       {showSkins && active && <SkinLibraryModal account={active} onClose={() => setShowSkins(false)} />}
+      {customizing && <HomeCustomizeModal onClose={() => setCustomizing(false)} />}
 
-      <div className="home-layout">
-        <div className="home-main">
-          <NewReleaseBanner />
-          <HomeSztulagz />
-          <div className="section">
-            <h3>Ostatnio grane</h3>
-            {recent.length === 0 ? (
-              <div className="mod-empty">
-                <p>Jeszcze nic nie grane.</p>
-                <button className="ghost" onClick={() => transition(() => setPage('instances'))}>
-                  Przejdź do instancji <ArrowRight size={16} />
-                </button>
-              </div>
-            ) : (
-              <div className="home-recent-grid">
-                {recent.map((i) => (
-                  <RecentInstanceRow key={i.id} instance={i} />
-                ))}
-              </div>
-            )}
-          </div>
-          <HomeServers />
-          <HomeStats />
+      {main.length === 0 && side.length === 0 ? (
+        <div className="section mod-empty">
+          <p>Wszystkie sekcje strony Start są ukryte.</p>
+          <button className="ghost" onClick={() => setCustomizing(true)}>
+            <SlidersHorizontal size={16} /> Dostosuj Start
+          </button>
         </div>
-
-        <div className="home-side">
-          {active && (
-            <div className="section home-hero">
-              <div className="skin-type">
-                {active.type === 'microsoft' ? 'Microsoft · Premium' : 'Konto offline'}
-              </div>
-              <div className="skin-name">{active.username}</div>
-              <div className="skin-stage">
-                <SkinView account={active} key={active.id} width={150} height={210} />
-              </div>
-              <div className="skin-hint">
-                <MousePointer2 size={13} /> Przeciągnij, aby obrócić
-              </div>
-              <button className="primary" onClick={() => setShowSkins(true)}>
-                <Palette size={16} /> Biblioteka skinów
-              </button>
-            </div>
-          )}
-          <HomeNews />
+      ) : (
+        <div className={`home-layout ${!main.length || !side.length ? 'single' : ''}`}>
+          {main.length > 0 && <div className="home-main">{main}</div>}
+          {side.length > 0 && <div className={`home-side ${!main.length ? 'wide' : ''}`}>{side}</div>}
         </div>
-      </div>
+      )}
     </>
   );
 }

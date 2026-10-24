@@ -160,7 +160,7 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function LauncherCard() {
+export function LauncherCard() {
   const status = useStore((s) => s.updateStatus);
   const [version, setVersion] = useState('');
   const [showLog, setShowLog] = useState(false);
@@ -214,7 +214,7 @@ function LauncherCard() {
   );
 }
 
-function MinecraftCard() {
+export function MinecraftCard() {
   const { news, error } = useMcNews();
   const newRelease = useNewRelease();
   const [notesFor, setNotesFor] = useState<McNewsEntry | null>(null);
@@ -271,12 +271,3 @@ function MinecraftCard() {
   );
 }
 
-/** Launcher update status + changelog and Minecraft news, under the skin on Home. */
-export function HomeNews() {
-  return (
-    <div className="home-news">
-      <LauncherCard />
-      <MinecraftCard />
-    </div>
-  );
-}
